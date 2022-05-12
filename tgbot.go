@@ -111,7 +111,7 @@ func WithLimitUpdates(limit int) Option {
 func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 	bot := &Bot{
 		api:         api,
-		cmdHandlers: make(map[string]Handler, 0),
+		cmdHandlers: make(map[string]Handler),
 		timeout:     60,
 		errHandler:  func(err error) {},
 		workerNum:   runtime.GOMAXPROCS(0),
