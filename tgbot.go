@@ -148,7 +148,7 @@ func (bot *Bot) Commands() []*Command {
 }
 
 func (bot *Bot) setupCommands() error {
-	commands := make([]tgbotapi.BotCommand, 0, len(bot.commands)+1)
+	commands := make([]tgbotapi.BotCommand, 0, len(bot.commands))
 	for _, hdr := range bot.Commands() {
 		commands = append(commands, tgbotapi.BotCommand{
 			Command:     hdr.Name,
