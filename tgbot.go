@@ -22,6 +22,9 @@ func (c Command) String() string {
 	return fmt.Sprintf("/%s - %s", c.Name, c.Description)
 }
 
+// UpdatesHandler handler another update
+type UpdatesHandler func(api *tgbotapi.BotAPI, update tgbotapi.Update)
+
 // Handler command handler
 type Handler func(api *tgbotapi.BotAPI, message *tgbotapi.Message) error
 
@@ -37,6 +40,8 @@ type Bot struct {
 
 	undefinedCommandHandler Handler
 	errHandler              ErrHandler
+	updatesHandler          func(api *tgbotapi.BotAPI, update tgbotapi.Update)
+	panicHandler            func(interface{}) (message string)
 
 	workerNum  int
 	workerPool *ants.Pool
@@ -49,63 +54,6 @@ type Bot struct {
 
 	closeC  chan struct{}
 	updateC chan tgbotapi.Update
-}
-
-type Option func(b *Bot)
-
-// WithTimeout set the get updates timeout.
-func WithTimeout(timeout int) Option {
-	return func(b *Bot) {
-		b.timeout = timeout
-	}
-}
-
-// WithWorkerNum set the number of workers to process updates.
-func WithWorkerNum(n int) Option {
-	return func(b *Bot) {
-		if b.workerNum > 0 {
-			b.workerNum = n
-		}
-	}
-}
-
-// WithWorkerPool set the worker pool for execute handler if the workerPool is non-nil.
-func WithWorkerPool(p *ants.Pool) Option {
-	return func(b *Bot) {
-		b.workerPool = p
-	}
-}
-
-// WithUndefinedCmdHandler set how to handle undefined commands.
-func WithUndefinedCmdHandler(h Handler) Option {
-	return func(b *Bot) {
-		if h != nil {
-			b.undefinedCommandHandler = h
-		}
-	}
-}
-
-// WithErrorHandler set error handler
-func WithErrorHandler(h ErrHandler) Option {
-	return func(b *Bot) {
-		if h != nil {
-			b.errHandler = h
-		}
-	}
-}
-
-// WithBufferSize set the buffer size for receive updates.
-func WithBufferSize(size int) Option {
-	return func(b *Bot) {
-		b.bufSize = size
-	}
-}
-
-// WithLimitUpdates set the get updates limit.
-func WithLimitUpdates(limit int) Option {
-	return func(b *Bot) {
-		b.limit = limit
-	}
 }
 
 func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
@@ -128,6 +76,13 @@ func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 		bot.bufSize = bot.limit
 	}
 	bot.updateC = make(chan tgbotapi.Update, bot.bufSize)
+
+	bot.panicHandler = func(v interface{}) string {
+		if v != nil {
+			bot.errHandler(fmt.Errorf("tgbot panic: %v", v))
+		}
+		return "oops! Service is temporarily unavailable"
+	}
 
 	return bot
 }
@@ -161,49 +116,56 @@ func (bot *Bot) setupCommands() error {
 }
 
 func (bot *Bot) handleUpdate(update tgbotapi.Update) {
-	// only handler message
-	if update.Message == nil || !update.Message.IsCommand() {
-		return
+	if bot.workerPool == nil || bot.panicHandler != nil {
+		defer func() {
+			if e := recover(); e != nil {
+				if tipMessage := bot.panicHandler(e); tipMessage != "" {
+					msg := tgbotapi.NewMessage(update.FromChat().ID, tipMessage)
+					msg.DisableWebPagePreview = true
+					if _, err := bot.api.Send(msg); err != nil {
+						bot.errHandler(err)
+					}
+				}
+			}
+		}()
 	}
 
-	defer func() {
-		if e := recover(); e != nil {
-			bot.errHandler(fmt.Errorf("handlerUpdate recover: %v", e))
+	switch {
+	case update.Message != nil && update.Message.IsCommand():
+		handler, ok := bot.cmdHandlers[update.Message.Command()]
+		if !ok {
+			handler = bot.undefinedCmdHandler
+		}
 
-			var chatId int64
-			switch {
-			case update.Message != nil:
-				chatId = update.Message.Chat.ID
+		// use workerPool if workerPool available
+		if bot.workerPool != nil {
+			if err := bot.workerPool.Submit(func() {
+				if err := handler(bot.api, update.Message); err != nil {
+					bot.errHandler(err)
+				}
+			}); err != nil {
+				bot.errHandler(err)
+			}
+			return
+		}
 
-			default:
+		if err := handler(bot.api, update.Message); err != nil {
+			bot.errHandler(err)
+		}
+
+	default:
+		if bot.updatesHandler != nil {
+			if bot.workerPool != nil {
+				if err := bot.workerPool.Submit(func() {
+					bot.updatesHandler(bot.api, update)
+				}); err != nil {
+					bot.errHandler(err)
+				}
 				return
 			}
 
-			if _, err := bot.api.Send(tgbotapi.NewMessage(chatId, "oops! Service is temporarily unavailable")); err != nil {
-				bot.errHandler(err)
-			}
+			bot.updatesHandler(bot.api, update)
 		}
-	}()
-
-	handler, ok := bot.cmdHandlers[update.Message.Command()]
-	if !ok {
-		handler = bot.undefinedCmdHandler
-	}
-
-	// use workerPool if workerPool available
-	if bot.workerPool != nil {
-		if err := bot.workerPool.Submit(func() {
-			if err := handler(bot.api, update.Message); err != nil {
-				bot.errHandler(err)
-			}
-		}); err != nil {
-			bot.errHandler(err)
-		}
-		return
-	}
-
-	if err := handler(bot.api, update.Message); err != nil {
-		bot.errHandler(err)
 	}
 }
 
