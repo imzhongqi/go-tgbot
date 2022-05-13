@@ -1,9 +1,11 @@
 package tgbot
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"log"
 	"runtime"
+	"sync"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -23,16 +25,20 @@ func (c Command) String() string {
 }
 
 // UpdatesHandler handler another update
-type UpdatesHandler func(api *tgbotapi.BotAPI, update tgbotapi.Update)
+type UpdatesHandler func(ctx *Context)
 
 // Handler command handler
-type Handler func(api *tgbotapi.BotAPI, message *tgbotapi.Message) error
+type Handler func(ctx *Context) error
 
 // ErrHandler error handler
 type ErrHandler func(err error)
 
 // Bot wrapper the telegram bot
 type Bot struct {
+	wg     sync.WaitGroup
+	ctx    context.Context
+	cancel func()
+
 	api *tgbotapi.BotAPI
 
 	commands    []*Command
@@ -40,21 +46,20 @@ type Bot struct {
 
 	undefinedCommandHandler Handler
 	errHandler              ErrHandler
-	updatesHandler          func(api *tgbotapi.BotAPI, update tgbotapi.Update)
+	updatesHandler          UpdatesHandler
 	panicHandler            func(interface{}) (message string)
 
 	workerNum  int
 	workerPool *ants.Pool
 
-	timeout int
+	// updateC chan buffer size
+	bufSize int
+	updateC chan tgbotapi.Update
 
-	bufSize        int
+	timeout        int
 	limit          int
 	offset         int
 	allowedUpdates []string
-
-	closeC  chan struct{}
-	updateC chan tgbotapi.Update
 }
 
 func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
@@ -64,13 +69,17 @@ func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 		timeout:     60,
 		errHandler:  func(err error) {},
 		workerNum:   runtime.GOMAXPROCS(0),
-		closeC:      make(chan struct{}),
 		limit:       100,
+		ctx:         context.Background(),
 	}
-
 	for _, o := range opts {
 		o(bot)
 	}
+
+	bot.ctx, bot.cancel = context.WithCancel(bot.ctx)
+
+	// hijack the api client
+	bot.api.Client = &client{cli: bot.api.Client, ctx: bot.ctx}
 
 	// set the updateC size for pollUpdates
 	if bot.bufSize == 0 {
@@ -84,7 +93,6 @@ func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 		}
 		return "oops! Service is temporarily unavailable"
 	}
-
 	return bot
 }
 
@@ -141,7 +149,12 @@ func (bot *Bot) handleUpdate(update tgbotapi.Update) {
 		// use workerPool if workerPool available
 		if bot.workerPool != nil {
 			if err := bot.workerPool.Submit(func() {
-				if err := handler(bot.api, update.Message); err != nil {
+				if err := handler(&Context{
+					Context: bot.ctx,
+					BotAPI:  bot.api,
+					Message: update.Message,
+					Update:  &update,
+				}); err != nil {
 					bot.errHandler(err)
 				}
 			}); err != nil {
@@ -150,7 +163,12 @@ func (bot *Bot) handleUpdate(update tgbotapi.Update) {
 			return
 		}
 
-		if err := handler(bot.api, update.Message); err != nil {
+		if err := handler(&Context{
+			Context: bot.ctx,
+			BotAPI:  bot.api,
+			Message: update.Message,
+			Update:  &update,
+		}); err != nil {
 			bot.errHandler(err)
 		}
 
@@ -158,30 +176,42 @@ func (bot *Bot) handleUpdate(update tgbotapi.Update) {
 		if bot.updatesHandler != nil {
 			if bot.workerPool != nil {
 				if err := bot.workerPool.Submit(func() {
-					bot.updatesHandler(bot.api, update)
+					bot.updatesHandler(&Context{
+						Context: bot.ctx,
+						BotAPI:  bot.api,
+						Message: update.Message,
+						Update:  &update,
+					})
 				}); err != nil {
 					bot.errHandler(err)
 				}
 				return
 			}
 
-			bot.updatesHandler(bot.api, update)
+			bot.updatesHandler(&Context{
+				Context: bot.ctx,
+				BotAPI:  bot.api,
+				Message: update.Message,
+				Update:  &update,
+			})
 		}
 	}
 }
 
-func (bot *Bot) undefinedCmdHandler(api *tgbotapi.BotAPI, message *tgbotapi.Message) error {
+func (bot *Bot) undefinedCmdHandler(ctx *Context) error {
 	if bot.undefinedCommandHandler != nil {
-		return bot.undefinedCommandHandler(api, message)
+		return bot.undefinedCommandHandler(ctx)
 	}
-	return NewBotAPI(api).ReplyText(message, "Unrecognized command!!!")
+	return ctx.ReplyText("Unrecognized command!!!")
 }
 
 func (bot *Bot) startWorker() {
 	startWorker := func() {
+		defer bot.wg.Done()
+
 		for {
 			select {
-			case <-bot.closeC:
+			case <-bot.ctx.Done():
 				return
 
 			case update := <-bot.updateC:
@@ -191,6 +221,7 @@ func (bot *Bot) startWorker() {
 	}
 
 	for i := 0; i < bot.workerNum; i++ {
+		bot.wg.Add(1)
 		go startWorker()
 	}
 }
@@ -198,8 +229,9 @@ func (bot *Bot) startWorker() {
 func (bot *Bot) pollUpdates() {
 	for {
 		select {
-		case <-bot.closeC:
+		case <-bot.ctx.Done():
 			return
+
 		default:
 		}
 
@@ -209,10 +241,10 @@ func (bot *Bot) pollUpdates() {
 			Timeout:        bot.timeout,
 			AllowedUpdates: bot.allowedUpdates,
 		})
-		if err != nil {
-			bot.errHandler(err)
-			log.Println("Failed to get updates, retrying in 3 seconds...")
-			time.Sleep(time.Second * 3)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			bot.errHandler(fmt.Errorf("failed to get updates, error: %w", err))
+			time.Sleep(3 * time.Second)
+			continue
 		}
 
 		for _, update := range updates {
@@ -236,9 +268,14 @@ func (bot *Bot) Run() error {
 	// start poll updates
 	go bot.pollUpdates()
 
+	// wait all worker done
+	bot.wg.Wait()
+
 	return nil
 }
 
 func (bot *Bot) Stop() {
-	close(bot.closeC)
+	bot.cancel()
+
+	bot.wg.Wait()
 }

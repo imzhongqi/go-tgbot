@@ -1,6 +1,8 @@
 package tgbot
 
 import (
+	"context"
+
 	"github.com/panjf2000/ants/v2"
 )
 
@@ -79,5 +81,12 @@ func WithPanicHandler(h func(interface{}) string) Option {
 func WithAllowedUpdates(v ...string) Option {
 	return func(b *Bot) {
 		b.allowedUpdates = v
+	}
+}
+
+// WithContext with the context
+func WithContext(ctx context.Context) Option {
+	return func(b *Bot) {
+		b.ctx = ctx
 	}
 }
