@@ -17,6 +17,14 @@ type Context struct {
 	update  *tgbotapi.Update
 }
 
+func (ctx *Context) Command() string {
+	return ctx.message.Command()
+}
+
+func (ctx *Context) CommandArgs() string {
+	return ctx.message.CommandArguments()
+}
+
 func (ctx *Context) Message() *tgbotapi.Message {
 	return ctx.message
 }
