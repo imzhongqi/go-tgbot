@@ -72,6 +72,14 @@ func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 		limit:       100,
 		ctx:         context.Background(),
 	}
+
+	bot.panicHandler = func(v interface{}) string {
+		if v != nil {
+			bot.errHandler(fmt.Errorf("tgbot panic: %v", v))
+		}
+		return "oops! Service is temporarily unavailable"
+	}
+
 	for _, o := range opts {
 		o(bot)
 	}
@@ -87,12 +95,6 @@ func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 	}
 	bot.updateC = make(chan tgbotapi.Update, bot.bufSize)
 
-	bot.panicHandler = func(v interface{}) string {
-		if v != nil {
-			bot.errHandler(fmt.Errorf("tgbot panic: %v", v))
-		}
-		return "oops! Service is temporarily unavailable"
-	}
 	return bot
 }
 
