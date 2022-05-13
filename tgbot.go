@@ -154,8 +154,8 @@ func (bot *Bot) handleUpdate(update tgbotapi.Update) {
 				if err := handler(&Context{
 					Context: bot.ctx,
 					BotAPI:  bot.api,
-					Message: update.Message,
-					Update:  &update,
+					message: update.Message,
+					update:  &update,
 				}); err != nil {
 					bot.errHandler(err)
 				}
@@ -168,8 +168,8 @@ func (bot *Bot) handleUpdate(update tgbotapi.Update) {
 		if err := handler(&Context{
 			Context: bot.ctx,
 			BotAPI:  bot.api,
-			Message: update.Message,
-			Update:  &update,
+			message: update.Message,
+			update:  &update,
 		}); err != nil {
 			bot.errHandler(err)
 		}
@@ -181,8 +181,8 @@ func (bot *Bot) handleUpdate(update tgbotapi.Update) {
 					bot.updatesHandler(&Context{
 						Context: bot.ctx,
 						BotAPI:  bot.api,
-						Message: update.Message,
-						Update:  &update,
+						message: update.Message,
+						update:  &update,
 					})
 				}); err != nil {
 					bot.errHandler(err)
@@ -193,8 +193,8 @@ func (bot *Bot) handleUpdate(update tgbotapi.Update) {
 			bot.updatesHandler(&Context{
 				Context: bot.ctx,
 				BotAPI:  bot.api,
-				Message: update.Message,
-				Update:  &update,
+				message: update.Message,
+				update:  &update,
 			})
 		}
 	}

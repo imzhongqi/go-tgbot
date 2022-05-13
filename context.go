@@ -6,35 +6,68 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-type MessageConfigOption = func(c *tgbotapi.MessageConfig)
-
-func NewMessage(chatId int64, text string, opts ...MessageConfigOption) tgbotapi.MessageConfig {
-	msg := tgbotapi.NewMessage(chatId, text)
-	for _, o := range opts {
-		o(&msg)
-	}
-	return msg
-}
+type MessageConfigOption func(c *tgbotapi.MessageConfig)
 
 type Context struct {
 	context.Context
 
 	*tgbotapi.BotAPI
 
-	Message *tgbotapi.Message
+	message *tgbotapi.Message
+	update  *tgbotapi.Update
+}
 
-	Update *tgbotapi.Update
+func (ctx *Context) Message() *tgbotapi.Message {
+	return ctx.message
+}
+
+func (ctx *Context) Update() *tgbotapi.Update {
+	return ctx.update
+}
+
+func (ctx *Context) FromChat() *tgbotapi.Chat {
+	return ctx.update.FromChat()
 }
 
 func (ctx *Context) ReplyText(text string, opts ...MessageConfigOption) error {
-	_, err := ctx.Send(NewMessage(ctx.Message.Chat.ID, text, opts...))
-	return err
+	return ctx.reply(text, nil, opts...)
 }
 
 func (ctx *Context) ReplyMarkdown(text string, opts ...MessageConfigOption) error {
-	msg := NewMessage(ctx.Message.Chat.ID, text, opts...)
-	msg.ParseMode = tgbotapi.ModeMarkdown
+	return ctx.reply(text, func(c *tgbotapi.MessageConfig) {
+		c.ParseMode = tgbotapi.ModeMarkdown
+	}, opts...)
+}
+
+func (ctx *Context) ReplyHTML(text string, opts ...MessageConfigOption) error {
+	return ctx.reply(text, func(c *tgbotapi.MessageConfig) {
+		c.ParseMode = tgbotapi.ModeHTML
+	}, opts...)
+}
+
+func (ctx *Context) reply(text string, dc MessageConfigOption, opts ...MessageConfigOption) error {
+	msg := tgbotapi.NewMessage(ctx.update.FromChat().ID, text)
 	msg.DisableWebPagePreview = true
+	if dc != nil {
+		dc(&msg)
+	}
+	for _, o := range opts {
+		o(&msg)
+	}
 	_, err := ctx.Send(msg)
 	return err
+}
+
+// WithEnableWebPagePreview enable web page preview
+func WithEnableWebPagePreview() MessageConfigOption {
+	return func(c *tgbotapi.MessageConfig) {
+		c.DisableWebPagePreview = false
+	}
+}
+
+// WithChatId set message chat id
+func WithChatId(chatId int64) MessageConfigOption {
+	return func(c *tgbotapi.MessageConfig) {
+		c.ChatID = chatId
+	}
 }
