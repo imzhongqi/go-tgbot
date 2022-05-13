@@ -33,6 +33,10 @@ func (ctx *Context) Update() *tgbotapi.Update {
 	return ctx.update
 }
 
+func (ctx *Context) SentFrom() *tgbotapi.User {
+	return ctx.update.SentFrom()
+}
+
 func (ctx *Context) FromChat() *tgbotapi.Chat {
 	return ctx.update.FromChat()
 }
