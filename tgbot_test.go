@@ -15,8 +15,8 @@ func ExampleNewBot() {
 	bot.AddCommand(&tgbot.Command{
 		Name:        "ping",
 		Description: "ping the bot",
-		Handler: func(api *tgbotapi.BotAPI, message *tgbotapi.Message) error {
-			return tgbot.NewBotAPI(api).ReplyMarkdown(message, "hello,world")
+		Handler: func(ctx *tgbot.Context) error {
+			return ctx.ReplyMarkdown("hello,world")
 		},
 	})
 	if err := bot.Run(); err != nil {
