@@ -48,9 +48,10 @@ type Bot struct {
 
 	timeout int
 
-	bufSize int
-	limit   int
-	offset  int
+	bufSize        int
+	limit          int
+	offset         int
+	allowedUpdates []string
 
 	closeC  chan struct{}
 	updateC chan tgbotapi.Update
@@ -203,9 +204,10 @@ func (bot *Bot) pollUpdates() {
 		}
 
 		updates, err := bot.api.GetUpdates(tgbotapi.UpdateConfig{
-			Limit:   bot.limit,
-			Offset:  bot.offset,
-			Timeout: bot.timeout,
+			Limit:          bot.limit,
+			Offset:         bot.offset,
+			Timeout:        bot.timeout,
+			AllowedUpdates: bot.allowedUpdates,
 		})
 		if err != nil {
 			bot.errHandler(err)

@@ -74,3 +74,10 @@ func WithPanicHandler(h func(interface{}) string) Option {
 		b.panicHandler = h
 	}
 }
+
+// WithAllowedUpdates set allowed updates
+func WithAllowedUpdates(v ...string) Option {
+	return func(b *Bot) {
+		b.allowedUpdates = v
+	}
+}
