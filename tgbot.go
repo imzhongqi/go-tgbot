@@ -149,9 +149,7 @@ func (bot *Bot) handleUpdate(update tgbotapi.Update) {
 		update:  &update,
 	}
 	if bot.timeout > 0 {
-		var cancel func()
-		ctx.Context, cancel = context.WithTimeout(ctx.Context, bot.timeout)
-		defer cancel()
+		ctx.Context, ctx.cancel = context.WithTimeout(ctx.Context, bot.timeout)
 	}
 
 	switch {
@@ -168,21 +166,21 @@ func (bot *Bot) executeCommandHandler(ctx *Context) {
 		handler = bot.undefinedCmdHandler
 	}
 
+	executeHandler := func() {
+		defer ctx.cancel()
+		if err := handler(ctx); err != nil {
+			bot.errHandler(err)
+		}
+	}
+
 	// use workerPool if workerPool available
 	if bot.workerPool != nil {
-		if err := bot.workerPool.Submit(func() {
-			if err := handler(ctx); err != nil {
-				bot.errHandler(err)
-			}
-		}); err != nil {
+		if err := bot.workerPool.Submit(executeHandler); err != nil {
 			bot.errHandler(err)
 		}
 		return
 	}
-
-	if err := handler(ctx); err != nil {
-		bot.errHandler(err)
-	}
+	executeHandler()
 }
 
 func (bot *Bot) executeUpdatesHandler(ctx *Context) {
@@ -190,16 +188,18 @@ func (bot *Bot) executeUpdatesHandler(ctx *Context) {
 		return
 	}
 
+	executeHandler := func() {
+		defer ctx.cancel()
+		bot.updatesHandler(ctx)
+	}
+
 	if bot.workerPool != nil {
-		if err := bot.workerPool.Submit(func() {
-			bot.updatesHandler(ctx)
-		}); err != nil {
+		if err := bot.workerPool.Submit(executeHandler); err != nil {
 			bot.errHandler(err)
 		}
 		return
 	}
-
-	bot.updatesHandler(ctx)
+	executeHandler()
 }
 
 func (bot *Bot) undefinedCmdHandler(ctx *Context) error {
