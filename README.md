@@ -1,7 +1,7 @@
 # tgbot
 [![Go Reference](https://pkg.go.dev/badge/github.com/imzhongqi/tgbot.svg)](https://pkg.go.dev/github.com/imzhongqi/tgbot)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Report Card](https://goreportcard.com/badge/github.com/imzhongqi/tgbot)](https://goreportcard.com/report/github.com/imzhongqi/tgbot)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 telegram Bot, 包装了一层 [telegram-bot-api](https://github.com/go-telegram-bot-api/telegram-bot-api), 为了更加便捷的创建 telegram 机器人， 提供了一个简单便捷的 API。
 
