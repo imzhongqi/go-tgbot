@@ -19,6 +19,9 @@ go get -u github.com/imzhongqi/tgbot
 package main
 
 import (
+	"log"
+	"time"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/imzhongqi/tgbot"
 	"github.com/panjf2000/ants/v2"
