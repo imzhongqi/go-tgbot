@@ -128,13 +128,18 @@ func (bot *Bot) setupCommands() error {
 }
 
 func (bot *Bot) handleUpdate(update tgbotapi.Update) {
+	ctx := &Context{
+		Context: bot.ctx,
+		BotAPI:  bot.api,
+		message: update.Message,
+		update:  &update,
+	}
+
 	if bot.workerPool == nil || bot.panicHandler != nil {
 		defer func() {
 			if e := recover(); e != nil {
 				if tipMessage := bot.panicHandler(e); tipMessage != "" {
-					msg := tgbotapi.NewMessage(update.FromChat().ID, tipMessage)
-					msg.DisableWebPagePreview = true
-					if _, err := bot.api.Send(msg); err != nil {
+					if err := ctx.ReplyText(tipMessage); err != nil {
 						bot.errHandler(err)
 					}
 				}
@@ -142,22 +147,28 @@ func (bot *Bot) handleUpdate(update tgbotapi.Update) {
 		}()
 	}
 
-	ctx := &Context{
-		Context: bot.ctx,
-		BotAPI:  bot.api,
-		message: update.Message,
-		update:  &update,
-	}
-	if bot.timeout > 0 {
-		ctx.Context, ctx.cancel = context.WithTimeout(ctx.Context, bot.timeout)
+	executeHandler := func() {
+		if bot.timeout > 0 {
+			var cancel func()
+			ctx.Context, cancel = context.WithTimeout(ctx.Context, bot.timeout)
+			defer cancel()
+		}
+
+		switch {
+		case update.Message != nil && update.Message.IsCommand():
+			bot.executeCommandHandler(ctx)
+		default:
+			bot.executeUpdatesHandler(ctx)
+		}
 	}
 
-	switch {
-	case update.Message != nil && update.Message.IsCommand():
-		bot.executeCommandHandler(ctx)
-	default:
-		bot.executeUpdatesHandler(ctx)
+	if bot.workerPool != nil {
+		if err := bot.workerPool.Submit(executeHandler); err != nil {
+			bot.errHandler(err)
+		}
 	}
+
+	executeHandler()
 }
 
 func (bot *Bot) executeCommandHandler(ctx *Context) {
@@ -166,21 +177,9 @@ func (bot *Bot) executeCommandHandler(ctx *Context) {
 		handler = bot.undefinedCmdHandler
 	}
 
-	executeHandler := func() {
-		defer ctx.cancel()
-		if err := handler(ctx); err != nil {
-			bot.errHandler(err)
-		}
+	if err := handler(ctx); err != nil {
+		bot.errHandler(err)
 	}
-
-	// use workerPool if workerPool available
-	if bot.workerPool != nil {
-		if err := bot.workerPool.Submit(executeHandler); err != nil {
-			bot.errHandler(err)
-		}
-		return
-	}
-	executeHandler()
 }
 
 func (bot *Bot) executeUpdatesHandler(ctx *Context) {
@@ -188,18 +187,7 @@ func (bot *Bot) executeUpdatesHandler(ctx *Context) {
 		return
 	}
 
-	executeHandler := func() {
-		defer ctx.cancel()
-		bot.updatesHandler(ctx)
-	}
-
-	if bot.workerPool != nil {
-		if err := bot.workerPool.Submit(executeHandler); err != nil {
-			bot.errHandler(err)
-		}
-		return
-	}
-	executeHandler()
+	bot.updatesHandler(ctx)
 }
 
 func (bot *Bot) undefinedCmdHandler(ctx *Context) error {

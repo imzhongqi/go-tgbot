@@ -13,8 +13,6 @@ type Context struct {
 
 	*tgbotapi.BotAPI
 
-	cancel func()
-
 	message *tgbotapi.Message
 	update  *tgbotapi.Update
 }
