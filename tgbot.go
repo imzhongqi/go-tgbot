@@ -150,7 +150,7 @@ func (bot *Bot) handleUpdate(update tgbotapi.Update) {
 	}
 	if bot.timeout > 0 {
 		var cancel func()
-		ctx.Context, cancel = context.WithTimeout(bot.ctx, bot.timeout)
+		ctx.Context, cancel = context.WithTimeout(ctx.Context, bot.timeout)
 		defer cancel()
 	}
 
