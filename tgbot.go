@@ -209,7 +209,7 @@ func (bot *Bot) undefinedCmdHandler(ctx *Context) error {
 	return ctx.ReplyText("Unrecognized command!!!")
 }
 
-func (bot *Bot) startWorker() {
+func (bot *Bot) startWorkers() {
 	startWorker := func() {
 		defer bot.wg.Done()
 
@@ -267,7 +267,7 @@ func (bot *Bot) Run() error {
 	}
 
 	// start the worker
-	bot.startWorker()
+	bot.startWorkers()
 
 	// start poll updates
 	go bot.pollUpdates()
