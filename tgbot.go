@@ -135,7 +135,6 @@ func (bot *Bot) handleUpdate(update tgbotapi.Update) {
 	ctx := &Context{
 		Context: bot.ctx,
 		BotAPI:  bot.api,
-		message: update.Message,
 		update:  &update,
 	}
 

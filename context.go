@@ -13,20 +13,19 @@ type Context struct {
 
 	*tgbotapi.BotAPI
 
-	message *tgbotapi.Message
-	update  *tgbotapi.Update
+	update *tgbotapi.Update
 }
 
 func (ctx *Context) Command() string {
-	return ctx.message.Command()
+	return ctx.update.Message.Command()
 }
 
 func (ctx *Context) CommandArgs() string {
-	return ctx.message.CommandArguments()
+	return ctx.update.Message.CommandArguments()
 }
 
 func (ctx *Context) Message() *tgbotapi.Message {
-	return ctx.message
+	return ctx.update.Message
 }
 
 func (ctx *Context) Update() *tgbotapi.Update {
