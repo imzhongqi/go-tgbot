@@ -23,6 +23,6 @@ func ExampleNewBot() {
 		panic(err)
 	}
 
-	//output:
+	// output:
 
 }

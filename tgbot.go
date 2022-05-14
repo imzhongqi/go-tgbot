@@ -65,13 +65,17 @@ type Bot struct {
 
 func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 	bot := &Bot{
-		api:           api,
-		cmdHandlers:   make(map[string]Handler),
+		ctx: context.Background(),
+
+		api: api,
+
+		cmdHandlers: make(map[string]Handler),
+		errHandler:  func(err error) {},
+
+		workerNum: runtime.GOMAXPROCS(0),
+
 		updateTimeout: 60,
-		errHandler:    func(err error) {},
-		workerNum:     runtime.GOMAXPROCS(0),
 		limit:         100,
-		ctx:           context.Background(),
 	}
 
 	bot.panicHandler = func(v interface{}) string {
