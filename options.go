@@ -2,16 +2,23 @@ package tgbot
 
 import (
 	"context"
+	"time"
 
 	"github.com/panjf2000/ants/v2"
 )
 
 type Option func(b *Bot)
 
-// WithTimeout set the get updates timeout.
-func WithTimeout(timeout int) Option {
+func WithTimeout(d time.Duration) Option {
 	return func(b *Bot) {
-		b.timeout = timeout
+		b.timeout = d
+	}
+}
+
+// WithUpdatesTimeout set the get updates updateTimeout.
+func WithUpdatesTimeout(timeout int) Option {
+	return func(b *Bot) {
+		b.updateTimeout = timeout
 	}
 }
 

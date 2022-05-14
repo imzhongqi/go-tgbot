@@ -44,6 +44,7 @@ type Bot struct {
 	commands    []*Command
 	cmdHandlers map[string]Handler
 
+	timeout                 time.Duration
 	undefinedCommandHandler Handler
 	errHandler              ErrHandler
 	updatesHandler          UpdatesHandler
@@ -56,7 +57,7 @@ type Bot struct {
 	bufSize int
 	updateC chan tgbotapi.Update
 
-	timeout        int
+	updateTimeout  int
 	limit          int
 	offset         int
 	allowedUpdates []string
@@ -64,13 +65,13 @@ type Bot struct {
 
 func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 	bot := &Bot{
-		api:         api,
-		cmdHandlers: make(map[string]Handler),
-		timeout:     60,
-		errHandler:  func(err error) {},
-		workerNum:   runtime.GOMAXPROCS(0),
-		limit:       100,
-		ctx:         context.Background(),
+		api:           api,
+		cmdHandlers:   make(map[string]Handler),
+		updateTimeout: 60,
+		errHandler:    func(err error) {},
+		workerNum:     runtime.GOMAXPROCS(0),
+		limit:         100,
+		ctx:           context.Background(),
 	}
 
 	bot.panicHandler = func(v interface{}) string {
@@ -141,63 +142,64 @@ func (bot *Bot) handleUpdate(update tgbotapi.Update) {
 		}()
 	}
 
+	ctx := &Context{
+		Context: bot.ctx,
+		BotAPI:  bot.api,
+		message: update.Message,
+		update:  &update,
+	}
+	if bot.timeout > 0 {
+		var cancel func()
+		ctx.Context, cancel = context.WithTimeout(bot.ctx, bot.timeout)
+		defer cancel()
+	}
+
 	switch {
 	case update.Message != nil && update.Message.IsCommand():
-		handler, ok := bot.cmdHandlers[update.Message.Command()]
-		if !ok {
-			handler = bot.undefinedCmdHandler
-		}
+		bot.executeCommandHandler(ctx)
+	default:
+		bot.executeUpdateHandler(ctx)
+	}
+}
 
-		// use workerPool if workerPool available
-		if bot.workerPool != nil {
-			if err := bot.workerPool.Submit(func() {
-				if err := handler(&Context{
-					Context: bot.ctx,
-					BotAPI:  bot.api,
-					message: update.Message,
-					update:  &update,
-				}); err != nil {
-					bot.errHandler(err)
-				}
-			}); err != nil {
+func (bot *Bot) executeCommandHandler(ctx *Context) {
+	handler, ok := bot.cmdHandlers[ctx.Command()]
+	if !ok {
+		handler = bot.undefinedCmdHandler
+	}
+
+	// use workerPool if workerPool available
+	if bot.workerPool != nil {
+		if err := bot.workerPool.Submit(func() {
+			if err := handler(ctx); err != nil {
 				bot.errHandler(err)
 			}
-			return
-		}
-
-		if err := handler(&Context{
-			Context: bot.ctx,
-			BotAPI:  bot.api,
-			message: update.Message,
-			update:  &update,
 		}); err != nil {
 			bot.errHandler(err)
 		}
-
-	default:
-		if bot.updatesHandler != nil {
-			if bot.workerPool != nil {
-				if err := bot.workerPool.Submit(func() {
-					bot.updatesHandler(&Context{
-						Context: bot.ctx,
-						BotAPI:  bot.api,
-						message: update.Message,
-						update:  &update,
-					})
-				}); err != nil {
-					bot.errHandler(err)
-				}
-				return
-			}
-
-			bot.updatesHandler(&Context{
-				Context: bot.ctx,
-				BotAPI:  bot.api,
-				message: update.Message,
-				update:  &update,
-			})
-		}
+		return
 	}
+
+	if err := handler(ctx); err != nil {
+		bot.errHandler(err)
+	}
+}
+
+func (bot *Bot) executeUpdateHandler(ctx *Context) {
+	if bot.updatesHandler == nil {
+		return
+	}
+
+	if bot.workerPool != nil {
+		if err := bot.workerPool.Submit(func() {
+			bot.updatesHandler(ctx)
+		}); err != nil {
+			bot.errHandler(err)
+		}
+		return
+	}
+
+	bot.updatesHandler(ctx)
 }
 
 func (bot *Bot) undefinedCmdHandler(ctx *Context) error {
@@ -240,7 +242,7 @@ func (bot *Bot) pollUpdates() {
 		updates, err := bot.api.GetUpdates(tgbotapi.UpdateConfig{
 			Limit:          bot.limit,
 			Offset:         bot.offset,
-			Timeout:        bot.timeout,
+			Timeout:        bot.updateTimeout,
 			AllowedUpdates: bot.allowedUpdates,
 		})
 		if err != nil && !errors.Is(err, context.Canceled) {
