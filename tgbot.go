@@ -158,7 +158,7 @@ func (bot *Bot) handleUpdate(update tgbotapi.Update) {
 	case update.Message != nil && update.Message.IsCommand():
 		bot.executeCommandHandler(ctx)
 	default:
-		bot.executeUpdateHandler(ctx)
+		bot.executeUpdatesHandler(ctx)
 	}
 }
 
@@ -185,7 +185,7 @@ func (bot *Bot) executeCommandHandler(ctx *Context) {
 	}
 }
 
-func (bot *Bot) executeUpdateHandler(ctx *Context) {
+func (bot *Bot) executeUpdatesHandler(ctx *Context) {
 	if bot.updatesHandler == nil {
 		return
 	}
