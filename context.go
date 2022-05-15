@@ -13,6 +13,8 @@ type Context struct {
 
 	*tgbotapi.BotAPI
 
+	bot *Bot
+
 	update *tgbotapi.Update
 }
 
@@ -75,13 +77,22 @@ func (ctx *Context) ReplyHTML(text string, opts ...MessageConfigOption) error {
 	)...)
 }
 
+func (ctx *Context) SendReply(chat tgbotapi.Chattable) error {
+	_, err := ctx.Request(chat)
+	return err
+}
+
 func (ctx *Context) reply(text string, opts ...MessageConfigOption) error {
 	msg := tgbotapi.NewMessage(ctx.update.FromChat().ID, text)
 	for _, o := range opts {
 		o(&msg)
 	}
-	_, err := ctx.Send(msg)
-	return err
+	return ctx.SendReply(msg)
+}
+
+func (ctx *Context) put() {
+	ctx.update = nil
+	ctx.bot.pool.Put(ctx)
 }
 
 func mergeOpts(opts []MessageConfigOption, def ...MessageConfigOption) []MessageConfigOption {

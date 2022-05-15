@@ -35,11 +35,14 @@ type ErrHandler func(err error)
 
 // Bot wrapper the telegram bot
 type Bot struct {
-	wg     sync.WaitGroup
-	ctx    context.Context
-	cancel func()
-
 	api *tgbotapi.BotAPI
+
+	wg sync.WaitGroup
+
+	pool sync.Pool
+
+	ctx    context.Context
+	cancel context.CancelFunc
 
 	commands    []*Command
 	cmdHandlers map[string]Handler
@@ -55,7 +58,7 @@ type Bot struct {
 
 	// updateC chan buffer size
 	bufSize int
-	updateC chan tgbotapi.Update
+	updateC chan *tgbotapi.Update
 
 	updateTimeout  int
 	limit          int
@@ -98,9 +101,19 @@ func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 	if bot.bufSize == 0 {
 		bot.bufSize = bot.limit
 	}
-	bot.updateC = make(chan tgbotapi.Update, bot.bufSize)
+	bot.updateC = make(chan *tgbotapi.Update, bot.bufSize)
 
 	return bot
+}
+
+func (bot *Bot) allocateContext() *Context {
+	if v := bot.pool.Get(); v != nil {
+		return v.(*Context)
+	}
+	return &Context{
+		Context: bot.ctx,
+		BotAPI:  bot.api,
+	}
 }
 
 func (bot *Bot) AddCommand(cmd *Command) {
@@ -131,12 +144,9 @@ func (bot *Bot) setupCommands() error {
 	return err
 }
 
-func (bot *Bot) handleUpdate(update tgbotapi.Update) {
-	ctx := &Context{
-		Context: bot.ctx,
-		BotAPI:  bot.api,
-		update:  &update,
-	}
+func (bot *Bot) handleUpdate(update *tgbotapi.Update) {
+	ctx := bot.allocateContext()
+	ctx.update = update
 
 	if bot.workerPool == nil || bot.panicHandler != nil {
 		defer func() {
@@ -152,7 +162,7 @@ func (bot *Bot) handleUpdate(update tgbotapi.Update) {
 
 	executeHandler := func() {
 		if bot.timeout > 0 {
-			var cancel func()
+			var cancel context.CancelFunc
 			ctx.Context, cancel = context.WithTimeout(ctx.Context, bot.timeout)
 			defer cancel()
 		}
@@ -160,9 +170,12 @@ func (bot *Bot) handleUpdate(update tgbotapi.Update) {
 		switch {
 		case update.Message != nil && update.Message.IsCommand():
 			bot.executeCommandHandler(ctx)
+
 		default:
 			bot.executeUpdatesHandler(ctx)
 		}
+
+		ctx.put()
 	}
 
 	if bot.workerPool != nil {
@@ -245,7 +258,7 @@ func (bot *Bot) pollUpdates() {
 		for _, update := range updates {
 			if update.UpdateID >= bot.offset {
 				bot.offset = update.UpdateID + 1
-				bot.updateC <- update
+				bot.updateC <- &update
 			}
 		}
 	}
