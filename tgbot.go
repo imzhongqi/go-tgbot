@@ -181,7 +181,7 @@ func (bot *Bot) handleUpdate(update *tgbotapi.Update) {
 		ctx.put()
 	}
 
-	if bot.workerPool != nil {
+	if bot.workerPool != nil && !bot.workerPool.IsClosed() {
 		if err := bot.workerPool.Submit(executeHandler); err != nil {
 			bot.errHandler(err)
 		}
