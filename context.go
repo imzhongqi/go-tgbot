@@ -62,20 +62,21 @@ func (ctx *Context) ReplyText(text string, opts ...MessageConfigOption) error {
 }
 
 func (ctx *Context) ReplyMarkdown(text string, opts ...MessageConfigOption) error {
-	return ctx.reply(text, mergeOpts(func(c *tgbotapi.MessageConfig) {
-		c.ParseMode = tgbotapi.ModeMarkdown
-	}, opts)...)
+	return ctx.reply(text, mergeOpts(opts,
+		WithMarkdown(),
+		WithDisableWebPagePreview(true),
+	)...)
 }
 
 func (ctx *Context) ReplyHTML(text string, opts ...MessageConfigOption) error {
-	return ctx.reply(text, mergeOpts(func(c *tgbotapi.MessageConfig) {
-		c.ParseMode = tgbotapi.ModeHTML
-	}, opts)...)
+	return ctx.reply(text, mergeOpts(opts,
+		WithHTML(),
+		WithDisableWebPagePreview(true),
+	)...)
 }
 
 func (ctx *Context) reply(text string, opts ...MessageConfigOption) error {
 	msg := tgbotapi.NewMessage(ctx.update.FromChat().ID, text)
-	msg.DisableWebPagePreview = true
 	for _, o := range opts {
 		o(&msg)
 	}
@@ -83,14 +84,35 @@ func (ctx *Context) reply(text string, opts ...MessageConfigOption) error {
 	return err
 }
 
-func mergeOpts(a MessageConfigOption, b []MessageConfigOption) []MessageConfigOption {
-	return append([]MessageConfigOption{a}, b...)
+func mergeOpts(opts []MessageConfigOption, def ...MessageConfigOption) []MessageConfigOption {
+	return append(def, opts...)
 }
 
-// WithEnableWebPagePreview enable web page preview
-func WithEnableWebPagePreview() MessageConfigOption {
+// WithHTML set parse mode to html
+func WithHTML() MessageConfigOption {
 	return func(c *tgbotapi.MessageConfig) {
-		c.DisableWebPagePreview = false
+		c.ParseMode = tgbotapi.ModeHTML
+	}
+}
+
+// WithMarkdown set parse mode to markdown
+func WithMarkdown() MessageConfigOption {
+	return func(c *tgbotapi.MessageConfig) {
+		c.ParseMode = tgbotapi.ModeMarkdown
+	}
+}
+
+// WithMarkdownV2 set parse mode to markdown v2
+func WithMarkdownV2() MessageConfigOption {
+	return func(c *tgbotapi.MessageConfig) {
+		c.ParseMode = tgbotapi.ModeMarkdownV2
+	}
+}
+
+// WithDisableWebPagePreview disable web page preview
+func WithDisableWebPagePreview(disable bool) MessageConfigOption {
+	return func(c *tgbotapi.MessageConfig) {
+		c.DisableWebPagePreview = disable
 	}
 }
 
