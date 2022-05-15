@@ -102,10 +102,25 @@ func (ctx *Context) reply(text string, opts ...MessageConfigOption) error {
 	return ctx.SendReply(msg)
 }
 
-func (ctx *Context) put() {
-	// don't cache update
-	ctx.update = nil
+func (ctx *Context) WithContext(c context.Context) *Context {
+	nc := ctx.clone()
+	nc.Context = c
+	return nc
+}
 
+func (ctx *Context) clone() *Context {
+	nc := new(Context)
+	*nc = *ctx
+	return nc
+}
+
+func (ctx *Context) reset() {
+	ctx.update = nil
+	ctx.Context = nil
+}
+
+func (ctx *Context) put() {
+	ctx.reset()
 	ctx.bot.pool.Put(ctx)
 }
 

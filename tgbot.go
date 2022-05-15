@@ -108,7 +108,9 @@ func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 
 func (bot *Bot) allocateContext() *Context {
 	if v := bot.pool.Get(); v != nil {
-		return v.(*Context)
+		ctx := v.(*Context)
+		ctx.Context = bot.ctx
+		return ctx
 	}
 	return &Context{
 		Context: bot.ctx,
