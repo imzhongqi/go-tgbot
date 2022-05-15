@@ -35,7 +35,7 @@ func ExampleNewBot() {
 		}),
 
 		tgbot.WithUndefinedCmdHandler(func(ctx *tgbot.Context) error {
-			return ctx.ReplyMarkdown("*unknown command*", tgbot.WithEnableWebPagePreview())
+			return ctx.ReplyMarkdown("*unknown command*", tgbot.WithDisableWebPagePreview(false))
 		}),
 
 		tgbot.WithErrorHandler(func(err error) {
