@@ -1,4 +1,5 @@
 # tgbot
+
 [![Go Reference](https://pkg.go.dev/badge/github.com/imzhongqi/tgbot.svg)](https://pkg.go.dev/github.com/imzhongqi/tgbot)
 [![Go Report Card](https://goreportcard.com/badge/github.com/imzhongqi/tgbot)](https://goreportcard.com/report/github.com/imzhongqi/tgbot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -53,7 +54,7 @@ func main() {
 		}),
 
 		tgbot.WithUndefinedCmdHandler(func(ctx *tgbot.Context) error {
-			return ctx.ReplyMarkdown("*unknown command*", tgbot.WithEnableWebPagePreview())
+			return ctx.ReplyMarkdown("*unknown command*", tgbot.WithDisableWebPagePreview(false))
 		}),
 
 		tgbot.WithErrorHandler(func(err error) {
