@@ -17,15 +17,32 @@ type Context struct {
 }
 
 func (ctx *Context) Command() string {
-	return ctx.update.Message.Command()
+	if message := ctx.Message(); message != nil {
+		return message.Command()
+	}
+	return ""
 }
 
 func (ctx *Context) CommandArgs() string {
-	return ctx.update.Message.CommandArguments()
+	if message := ctx.Message(); message != nil {
+		return message.CommandArguments()
+	}
+	return ""
 }
 
 func (ctx *Context) Message() *tgbotapi.Message {
-	return ctx.update.Message
+	switch {
+	case ctx.update.Message != nil:
+		return ctx.update.Message
+	case ctx.update.EditedMessage != nil:
+		return ctx.update.EditedMessage
+	case ctx.update.ChannelPost != nil:
+		return ctx.update.ChannelPost
+	case ctx.update.EditedChannelPost != nil:
+		return ctx.update.EditedChannelPost
+	default:
+		return nil
+	}
 }
 
 func (ctx *Context) Update() *tgbotapi.Update {
@@ -41,32 +58,33 @@ func (ctx *Context) FromChat() *tgbotapi.Chat {
 }
 
 func (ctx *Context) ReplyText(text string, opts ...MessageConfigOption) error {
-	return ctx.reply(text, nil, opts...)
+	return ctx.reply(text, opts...)
 }
 
 func (ctx *Context) ReplyMarkdown(text string, opts ...MessageConfigOption) error {
-	return ctx.reply(text, func(c *tgbotapi.MessageConfig) {
+	return ctx.reply(text, mergeOpts(func(c *tgbotapi.MessageConfig) {
 		c.ParseMode = tgbotapi.ModeMarkdown
-	}, opts...)
+	}, opts)...)
 }
 
 func (ctx *Context) ReplyHTML(text string, opts ...MessageConfigOption) error {
-	return ctx.reply(text, func(c *tgbotapi.MessageConfig) {
+	return ctx.reply(text, mergeOpts(func(c *tgbotapi.MessageConfig) {
 		c.ParseMode = tgbotapi.ModeHTML
-	}, opts...)
+	}, opts)...)
 }
 
-func (ctx *Context) reply(text string, dc MessageConfigOption, opts ...MessageConfigOption) error {
+func (ctx *Context) reply(text string, opts ...MessageConfigOption) error {
 	msg := tgbotapi.NewMessage(ctx.update.FromChat().ID, text)
 	msg.DisableWebPagePreview = true
-	if dc != nil {
-		dc(&msg)
-	}
 	for _, o := range opts {
 		o(&msg)
 	}
 	_, err := ctx.Send(msg)
 	return err
+}
+
+func mergeOpts(a MessageConfigOption, b []MessageConfigOption) []MessageConfigOption {
+	return append([]MessageConfigOption{a}, b...)
 }
 
 // WithEnableWebPagePreview enable web page preview
