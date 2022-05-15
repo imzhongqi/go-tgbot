@@ -183,6 +183,7 @@ func (bot *Bot) handleUpdate(update *tgbotapi.Update) {
 		if err := bot.workerPool.Submit(executeHandler); err != nil {
 			bot.errHandler(err)
 		}
+		return
 	}
 
 	executeHandler()
@@ -283,8 +284,12 @@ func (bot *Bot) Run() error {
 	return nil
 }
 
-func (bot *Bot) Stop() {
+func (bot *Bot) Stop() context.Context {
 	bot.cancel()
-
-	bot.wg.Wait()
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		bot.wg.Wait()
+		cancel()
+	}()
+	return ctx
 }
