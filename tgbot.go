@@ -113,6 +113,7 @@ func (bot *Bot) allocateContext() *Context {
 	return &Context{
 		Context: bot.ctx,
 		BotAPI:  bot.api,
+		bot:     bot,
 	}
 }
 

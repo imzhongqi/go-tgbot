@@ -2,6 +2,7 @@ package tgbot
 
 import (
 	"context"
+	"errors"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -83,7 +84,11 @@ func (ctx *Context) SendReply(chat tgbotapi.Chattable) error {
 }
 
 func (ctx *Context) reply(text string, opts ...MessageConfigOption) error {
-	msg := tgbotapi.NewMessage(ctx.update.FromChat().ID, text)
+	chat := ctx.update.FromChat()
+	if chat == nil {
+		return errors.New("no chat currently")
+	}
+	msg := tgbotapi.NewMessage(chat.ID, text)
 	for _, o := range opts {
 		o(&msg)
 	}
@@ -91,7 +96,9 @@ func (ctx *Context) reply(text string, opts ...MessageConfigOption) error {
 }
 
 func (ctx *Context) put() {
+	// don't cache update
 	ctx.update = nil
+
 	ctx.bot.pool.Put(ctx)
 }
 
