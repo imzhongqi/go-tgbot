@@ -169,7 +169,7 @@ func (bot *Bot) handleUpdate(update *tgbotapi.Update) {
 		}
 
 		switch {
-		case update.Message != nil && update.Message.IsCommand():
+		case ctx.IsCommand():
 			bot.executeCommandHandler(ctx)
 
 		default:

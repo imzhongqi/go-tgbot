@@ -26,6 +26,13 @@ func (ctx *Context) Command() string {
 	return ""
 }
 
+func (ctx *Context) IsCommand() bool {
+	if msg := ctx.Message(); msg != nil {
+		return msg.IsCommand()
+	}
+	return false
+}
+
 func (ctx *Context) CommandArgs() string {
 	if message := ctx.Message(); message != nil {
 		return message.CommandArguments()
