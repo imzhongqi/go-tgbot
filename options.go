@@ -9,6 +9,7 @@ import (
 
 type Option func(b *Bot)
 
+// WithTimeout set context timeout
 func WithTimeout(d time.Duration) Option {
 	return func(b *Bot) {
 		b.timeout = d
