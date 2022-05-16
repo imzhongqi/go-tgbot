@@ -12,16 +12,16 @@ import (
 	"github.com/panjf2000/ants/v2"
 )
 
-// UpdatesHandler handler another update
+// UpdatesHandler handler another update.
 type UpdatesHandler func(ctx *Context)
 
-// Handler command handler
+// Handler command handler.
 type Handler func(ctx *Context) error
 
-// ErrHandler error handler
+// ErrHandler error handler.
 type ErrHandler func(err error)
 
-// Bot wrapper the telegram bot
+// Bot wrapper the telegram bot.
 type Bot struct {
 	api *tgbotapi.BotAPI
 
@@ -44,7 +44,7 @@ type Bot struct {
 	workerNum  int
 	workerPool *ants.Pool
 
-	// updateC chan buffer size
+	// updateC chan buffer size.
 	bufSize int
 	updateC chan *tgbotapi.Update
 
@@ -82,10 +82,10 @@ func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 
 	bot.ctx, bot.cancel = context.WithCancel(bot.ctx)
 
-	// hijack the api client
+	// hijack the api client.
 	bot.api.Client = &client{cli: bot.api.Client, ctx: bot.ctx}
 
-	// set the updateC size for pollUpdates
+	// set the updateC size for pollUpdates.
 	if bot.bufSize == 0 {
 		bot.bufSize = bot.limit
 	}
@@ -259,18 +259,18 @@ func (bot *Bot) pollUpdates() {
 }
 
 func (bot *Bot) Run() error {
-	// setup bot commands
+	// setup bot commands.
 	if err := bot.setupCommands(); err != nil {
 		return fmt.Errorf("failed to setup commands, error: %w", err)
 	}
 
-	// start the worker
+	// start the worker.
 	bot.startWorkers()
 
-	// start poll updates
+	// start poll updates.
 	go bot.pollUpdates()
 
-	// wait all worker done
+	// wait all worker done.
 	bot.wg.Wait()
 
 	return nil

@@ -9,7 +9,7 @@ import (
 
 type Option func(b *Bot)
 
-// WithTimeout set context timeout
+// WithTimeout set context timeout.
 func WithTimeout(d time.Duration) Option {
 	return func(b *Bot) {
 		b.timeout = d
@@ -48,7 +48,7 @@ func WithUndefinedCmdHandler(h Handler) Option {
 	}
 }
 
-// WithErrorHandler set error handler
+// WithErrorHandler set error handler.
 func WithErrorHandler(h ErrHandler) Option {
 	return func(b *Bot) {
 		if h != nil {
@@ -71,28 +71,28 @@ func WithLimitUpdates(limit int) Option {
 	}
 }
 
-// WithUpdatesHandler set the updates handler
+// WithUpdatesHandler set the updates handler.
 func WithUpdatesHandler(handler UpdatesHandler) Option {
 	return func(b *Bot) {
 		b.updatesHandler = handler
 	}
 }
 
-// WithPanicHandler set panic handler
+// WithPanicHandler set panic handler.
 func WithPanicHandler(h func(interface{}) string) Option {
 	return func(b *Bot) {
 		b.panicHandler = h
 	}
 }
 
-// WithAllowedUpdates set allowed updates
+// WithAllowedUpdates set allowed updates.
 func WithAllowedUpdates(v ...string) Option {
 	return func(b *Bot) {
 		b.allowedUpdates = v
 	}
 }
 
-// WithContext with the context
+// WithContext with the context.
 func WithContext(ctx context.Context) Option {
 	return func(b *Bot) {
 		b.ctx = ctx

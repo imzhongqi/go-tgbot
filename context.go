@@ -19,7 +19,7 @@ type Context struct {
 	update *tgbotapi.Update
 }
 
-// Command return command name if message is non-nil
+// Command return command name if message is non-nil.
 func (ctx *Context) Command() string {
 	if message := ctx.Message(); message != nil {
 		return message.Command()
@@ -27,7 +27,7 @@ func (ctx *Context) Command() string {
 	return ""
 }
 
-// IsCommand report whether the current message is a command
+// IsCommand report whether the current message is a command.
 func (ctx *Context) IsCommand() bool {
 	if msg := ctx.Message(); msg != nil {
 		return msg.IsCommand()
@@ -35,7 +35,7 @@ func (ctx *Context) IsCommand() bool {
 	return false
 }
 
-// CommandArgs return command arguments if message is non-nil
+// CommandArgs return command arguments if message is non-nil.
 func (ctx *Context) CommandArgs() string {
 	if message := ctx.Message(); message != nil {
 		return message.CommandArguments()
@@ -70,12 +70,12 @@ func (ctx *Context) FromChat() *tgbotapi.Chat {
 	return ctx.update.FromChat()
 }
 
-// ReplyText reply to the current chat
+// ReplyText reply to the current chat.
 func (ctx *Context) ReplyText(text string, opts ...MessageConfigOption) error {
 	return ctx.reply(text, opts...)
 }
 
-// ReplyMarkdown reply to the current chat, text format is markdown
+// ReplyMarkdown reply to the current chat, text format is markdown.
 func (ctx *Context) ReplyMarkdown(text string, opts ...MessageConfigOption) error {
 	return ctx.reply(text, mergeOpts(opts,
 		WithMarkdown(),
@@ -83,7 +83,7 @@ func (ctx *Context) ReplyMarkdown(text string, opts ...MessageConfigOption) erro
 	)...)
 }
 
-// ReplyHTML reply to the current chat, text format is HTML
+// ReplyHTML reply to the current chat, text format is HTML.
 func (ctx *Context) ReplyHTML(text string, opts ...MessageConfigOption) error {
 	return ctx.reply(text, mergeOpts(opts,
 		WithHTML(),
@@ -141,28 +141,28 @@ func WithHTML() MessageConfigOption {
 	}
 }
 
-// WithMarkdown set parse mode to markdown
+// WithMarkdown set parse mode to markdown.
 func WithMarkdown() MessageConfigOption {
 	return func(c *tgbotapi.MessageConfig) {
 		c.ParseMode = tgbotapi.ModeMarkdown
 	}
 }
 
-// WithMarkdownV2 set parse mode to markdown v2
+// WithMarkdownV2 set parse mode to markdown v2.
 func WithMarkdownV2() MessageConfigOption {
 	return func(c *tgbotapi.MessageConfig) {
 		c.ParseMode = tgbotapi.ModeMarkdownV2
 	}
 }
 
-// WithDisableWebPagePreview disable web page preview
+// WithDisableWebPagePreview disable web page preview.
 func WithDisableWebPagePreview(disable bool) MessageConfigOption {
 	return func(c *tgbotapi.MessageConfig) {
 		c.DisableWebPagePreview = disable
 	}
 }
 
-// WithChatId set message chat id
+// WithChatId set message chat id.
 func WithChatId(chatId int64) MessageConfigOption {
 	return func(c *tgbotapi.MessageConfig) {
 		c.ChatID = chatId
