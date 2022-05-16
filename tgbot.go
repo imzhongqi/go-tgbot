@@ -12,18 +12,6 @@ import (
 	"github.com/panjf2000/ants/v2"
 )
 
-// Command is telegram command
-type Command struct {
-	Name        string
-	Description string
-	Hide        bool // hide the command on telegram commands menu
-	Handler     Handler
-}
-
-func (c Command) String() string {
-	return fmt.Sprintf("/%s - %s", c.Name, c.Description)
-}
-
 // UpdatesHandler handler another update
 type UpdatesHandler func(ctx *Context)
 
