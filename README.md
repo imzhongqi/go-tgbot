@@ -61,7 +61,7 @@ func main() {
 			log.Println(err)
 		}),
 	)
-	bot.AddCommand(&tgbot.Command{
+	bot.AddCommands(&tgbot.Command{
 		Name:        "ping",
 		Description: "ping the bot",
 		Handler: func(ctx *tgbot.Context) error {
