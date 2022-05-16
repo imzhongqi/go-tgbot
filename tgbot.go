@@ -107,8 +107,8 @@ func (bot *Bot) allocateContext() *Context {
 	}
 }
 
-func (bot *Bot) AddCommand(cmd ...*Command) {
-	for _, c := range cmd {
+func (bot *Bot) AddCommands(cmds ...*Command) {
+	for _, c := range cmds {
 		bot.commands = append(bot.commands, c)
 		bot.cmdHandlers[c.Name] = c.Handler
 	}
