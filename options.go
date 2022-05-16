@@ -57,6 +57,13 @@ func WithErrorHandler(h ErrHandler) Option {
 	}
 }
 
+// WithAutoSetupCommands will auto setup command to telegram if true.
+func WithAutoSetupCommands(v bool) Option {
+	return func(b *Bot) {
+		b.autoSetupCommands = v
+	}
+}
+
 // WithBufferSize set the buffer size for receive updates.
 func WithBufferSize(size int) Option {
 	return func(b *Bot) {

@@ -32,8 +32,9 @@ type Bot struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	commands    []*Command
-	cmdHandlers map[string]Handler
+	autoSetupCommands bool
+	commands          []*Command
+	cmdHandlers       map[string]Handler
 
 	timeout                 time.Duration
 	undefinedCommandHandler Handler
@@ -60,8 +61,9 @@ func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 
 		api: api,
 
-		cmdHandlers: make(map[string]Handler),
-		errHandler:  func(err error) {},
+		autoSetupCommands: true,
+		cmdHandlers:       make(map[string]Handler),
+		errHandler:        func(err error) {},
 
 		workerNum: runtime.GOMAXPROCS(0),
 
@@ -259,9 +261,11 @@ func (bot *Bot) pollUpdates() {
 }
 
 func (bot *Bot) Run() error {
-	// setup bot commands.
-	if err := bot.setupCommands(); err != nil {
-		return fmt.Errorf("failed to setup commands, error: %w", err)
+	if bot.autoSetupCommands {
+		// setup bot commands.
+		if err := bot.setupCommands(); err != nil {
+			return fmt.Errorf("failed to setup commands, error: %w", err)
+		}
 	}
 
 	// start the worker.
