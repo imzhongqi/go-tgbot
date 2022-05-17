@@ -62,7 +62,6 @@ func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 		api: api,
 
 		autoSetupCommands: true,
-		cmdHandlers:       make(map[string]Handler),
 		errHandler:        func(err error) {},
 
 		workerNum: runtime.GOMAXPROCS(0),
@@ -110,9 +109,25 @@ func (bot *Bot) allocateContext() *Context {
 }
 
 func (bot *Bot) AddCommands(commands ...*Command) {
+	if bot.cmdHandlers == nil {
+		bot.cmdHandlers = make(map[string]Handler)
+	}
+
 	for _, c := range commands {
-		bot.commands = append(bot.commands, c)
+		switch {
+		case c.Name == "":
+			panic("command name must be non-empty")
+		case c.Description == "":
+			panic("command description must be non-empty")
+		case c.Handler == nil:
+			panic("command handler must be non-nil")
+		}
+		if _, ok := bot.cmdHandlers[c.Name]; ok {
+			panic("duplicate command name: " + c.Name)
+		}
+
 		bot.cmdHandlers[c.Name] = c.Handler
+		bot.commands = append(bot.commands, c)
 	}
 }
 
@@ -133,6 +148,10 @@ func (bot *Bot) setupCommands() error {
 			Command:     hdr.Name,
 			Description: hdr.Description,
 		})
+	}
+
+	if len(commands) == 0 {
+		return nil
 	}
 
 	_, err := bot.api.Request(tgbotapi.NewSetMyCommands(commands...))
@@ -163,7 +182,7 @@ func (bot *Bot) handleUpdate(update *tgbotapi.Update) {
 		}
 
 		switch {
-		case ctx.IsCommand():
+		case bot.cmdHandlers != nil && ctx.IsCommand():
 			bot.executeCommandHandler(ctx)
 
 		default:
