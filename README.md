@@ -1,4 +1,4 @@
-# tgbot
+# go-tgbot
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/imzhongqi/tgbot.svg)](https://pkg.go.dev/github.com/imzhongqi/tgbot)
 [![Go Report Card](https://goreportcard.com/badge/github.com/imzhongqi/tgbot)](https://goreportcard.com/report/github.com/imzhongqi/tgbot)
@@ -11,7 +11,7 @@ Wrapped [telegram-bot-api](https://github.com/go-telegram-bot-api/telegram-bot-a
 Run the following command under your project:
 
 ```
-go get -u github.com/imzhongqi/tgbot
+go get -u github.com/imzhongqi/go-tgbot
 ```
 
 ## 2. Example
@@ -24,7 +24,7 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/imzhongqi/tgbot"
+	"github.com/imzhongqi/go-tgbot"
 	"github.com/panjf2000/ants/v2"
 )
 

@@ -1,4 +1,4 @@
-module github.com/imzhongqi/tgbot
+module github.com/imzhongqi/go-tgbot
 
 go 1.18
 

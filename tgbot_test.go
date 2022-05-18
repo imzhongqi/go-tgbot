@@ -5,7 +5,7 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/imzhongqi/tgbot"
+	"github.com/imzhongqi/go-tgbot"
 	"github.com/panjf2000/ants/v2"
 )
 
