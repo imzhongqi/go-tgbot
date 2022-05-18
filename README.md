@@ -1,7 +1,7 @@
 # go-tgbot
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/imzhongqi/tgbot.svg)](https://pkg.go.dev/github.com/imzhongqi/tgbot)
-[![Go Report Card](https://goreportcard.com/badge/github.com/imzhongqi/tgbot)](https://goreportcard.com/report/github.com/imzhongqi/tgbot)
+[![Go Reference](https://pkg.go.dev/badge/github.com/imzhongqi/go-tgbot.svg)](https://pkg.go.dev/github.com/imzhongqi/go-tgbot)
+[![Go Report Card](https://goreportcard.com/badge/github.com/imzhongqi/go-tgbot)](https://goreportcard.com/report/github.com/imzhongqi/go-tgbot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Wrapped [telegram-bot-api](https://github.com/go-telegram-bot-api/telegram-bot-api) to create telegram bot faster.
