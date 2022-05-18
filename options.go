@@ -16,7 +16,8 @@ func WithTimeout(d time.Duration) Option {
 	}
 }
 
-// WithUpdateTimeout set the get updates updateTimeout.
+// WithUpdateTimeout set the get updates updateTimeout,
+// timeout unit is seconds, max is 50 second.
 func WithUpdateTimeout(timeout int) Option {
 	return func(b *Bot) {
 		b.updateTimeout = timeout

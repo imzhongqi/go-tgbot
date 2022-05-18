@@ -66,7 +66,7 @@ func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 
 		workerNum: runtime.GOMAXPROCS(0),
 
-		updateTimeout: 60,
+		updateTimeout: 50, // 50s is maximum timeout
 		limit:         100,
 	}
 
