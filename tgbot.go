@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -20,6 +21,8 @@ type Handler func(ctx *Context) error
 
 // ErrHandler error handler.
 type ErrHandler func(err error)
+
+type PanicHandler func(*Context, interface{})
 
 // Bot wrapper the telegram bot.
 type Bot struct {
@@ -40,7 +43,7 @@ type Bot struct {
 	undefinedCommandHandler Handler
 	errHandler              ErrHandler
 	updatesHandler          UpdatesHandler
-	panicHandler            func(interface{}) (message string)
+	panicHandler            PanicHandler
 
 	workerNum  int
 	workerPool *ants.Pool
@@ -70,11 +73,10 @@ func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 		limit:         100,
 	}
 
-	bot.panicHandler = func(v interface{}) string {
+	bot.panicHandler = func(ctx *Context, v interface{}) {
 		if v != nil {
-			bot.errHandler(fmt.Errorf("tgbot panic: %v", v))
+			bot.errHandler(fmt.Errorf("tgbot panic: %v, stack: %s", v, debug.Stack()))
 		}
-		return "oops! Service is temporarily unavailable"
 	}
 
 	for _, o := range opts {
@@ -165,11 +167,7 @@ func (bot *Bot) handleUpdate(update *tgbotapi.Update) {
 	if bot.workerPool == nil || bot.panicHandler != nil {
 		defer func() {
 			if e := recover(); e != nil {
-				if tipMessage := bot.panicHandler(e); tipMessage != "" {
-					if err := ctx.ReplyText(tipMessage); err != nil {
-						bot.errHandler(err)
-					}
-				}
+				bot.panicHandler(ctx, e)
 			}
 		}()
 	}
