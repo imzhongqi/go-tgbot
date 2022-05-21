@@ -87,7 +87,7 @@ func WithUpdatesHandler(handler UpdatesHandler) Option {
 }
 
 // WithPanicHandler set panic handler.
-func WithPanicHandler(h func(interface{}) string) Option {
+func WithPanicHandler(h PanicHandler) Option {
 	return func(b *Bot) {
 		b.panicHandler = h
 	}
