@@ -4,29 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime"
-	"runtime/debug"
 	"sync"
-	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/panjf2000/ants/v2"
 )
-
-// UpdatesHandler handler another update.
-type UpdatesHandler func(ctx *Context)
-
-// Handler command handler.
-type Handler func(ctx *Context) error
-
-// ErrHandler error handler.
-type ErrHandler func(err error)
-
-type PanicHandler func(*Context, interface{})
 
 // Bot wrapper the telegram bot.
 type Bot struct {
 	api *tgbotapi.BotAPI
+
+	// opts is bot options
+	opts *Options
 
 	wg sync.WaitGroup
 
@@ -35,64 +23,28 @@ type Bot struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	autoSetupCommands bool
-	commands          []*Command
-	cmdHandlers       map[string]Handler
+	commands    []*Command
+	cmdHandlers map[string]Handler
 
-	timeout                 time.Duration
-	undefinedCommandHandler Handler
-	errHandler              ErrHandler
-	updatesHandler          UpdatesHandler
-	panicHandler            PanicHandler
-
-	workerNum  int
-	workerPool *ants.Pool
-
-	// updateC chan buffer size.
-	bufSize int
 	updateC chan *tgbotapi.Update
-
-	updateTimeout  int
-	limit          int
-	offset         int
-	allowedUpdates []string
 }
 
 func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 	bot := &Bot{
-		ctx: context.Background(),
-
-		api: api,
-
-		autoSetupCommands: true,
-		errHandler:        func(err error) {},
-
-		workerNum: runtime.GOMAXPROCS(0),
-
-		updateTimeout: 50, // 50s is maximum timeout
-		limit:         100,
+		opts: newOptions(opts...),
+		api:  api,
 	}
 
-	bot.panicHandler = func(ctx *Context, v interface{}) {
-		if v != nil {
-			bot.errHandler(fmt.Errorf("tgbot panic: %v, stack: %s", v, debug.Stack()))
-		}
-	}
-
-	for _, o := range opts {
-		o(bot)
-	}
-
-	bot.ctx, bot.cancel = context.WithCancel(bot.ctx)
+	bot.ctx, bot.cancel = context.WithCancel(bot.opts.ctx)
 
 	// hijack the api client.
 	bot.api.Client = &client{cli: bot.api.Client, ctx: bot.ctx}
 
 	// set the updateC size for pollUpdates.
-	if bot.bufSize == 0 {
-		bot.bufSize = bot.limit
+	if bot.opts.bufSize == 0 {
+		bot.opts.bufSize = bot.opts.limit
 	}
-	bot.updateC = make(chan *tgbotapi.Update, bot.bufSize)
+	bot.updateC = make(chan *tgbotapi.Update, bot.opts.bufSize)
 
 	return bot
 }
@@ -164,64 +116,64 @@ func (bot *Bot) handleUpdate(update *tgbotapi.Update) {
 	ctx := bot.allocateContext()
 	ctx.update = update
 
-	if bot.workerPool == nil || bot.panicHandler != nil {
-		defer func() {
-			if e := recover(); e != nil {
-				bot.panicHandler(ctx, e)
-			}
-		}()
-	}
+	updateHandler := func() {
+		if bot.opts.panicHandler != nil {
+			defer func() {
+				if e := recover(); e != nil {
+					bot.opts.panicHandler(ctx, e)
+				}
+			}()
+		}
 
-	executeHandler := func() {
-		if bot.timeout > 0 {
+		if bot.opts.timeout > 0 {
 			var cancel context.CancelFunc
-			ctx.Context, cancel = context.WithTimeout(ctx.Context, bot.timeout)
+			ctx.Context, cancel = context.WithTimeout(ctx.Context, bot.opts.timeout)
 			defer cancel()
 		}
 
 		switch {
 		case bot.cmdHandlers != nil && ctx.IsCommand():
-			bot.executeCommandHandler(ctx)
+			bot.commandHandler(ctx)
 
 		default:
-			bot.executeUpdatesHandler(ctx)
+			bot.updatesHandler(ctx)
 		}
 
 		ctx.put()
 	}
 
-	if bot.workerPool != nil && !bot.workerPool.IsClosed() {
-		if err := bot.workerPool.Submit(executeHandler); err != nil {
-			bot.errHandler(err)
+	if bot.opts.workerPool != nil && !bot.opts.workerPool.IsClosed() {
+		if err := bot.opts.workerPool.Submit(updateHandler); err != nil {
+			bot.opts.errHandler(err)
 		}
 		return
 	}
 
-	executeHandler()
+	updateHandler()
 }
 
-func (bot *Bot) executeCommandHandler(ctx *Context) {
+func (bot *Bot) commandHandler(ctx *Context) {
 	handler, ok := bot.cmdHandlers[ctx.Command()]
 	if !ok {
 		handler = bot.undefinedCmdHandler
 	}
 
 	if err := handler(ctx); err != nil {
-		bot.errHandler(err)
+		bot.opts.errHandler(err)
 	}
 }
 
-func (bot *Bot) executeUpdatesHandler(ctx *Context) {
-	if bot.updatesHandler == nil {
+func (bot *Bot) updatesHandler(ctx *Context) {
+	if bot.opts.updatesHandler == nil {
 		return
 	}
 
-	bot.updatesHandler(ctx)
+	bot.opts.updatesHandler(ctx)
 }
 
 func (bot *Bot) undefinedCmdHandler(ctx *Context) error {
-	if bot.undefinedCommandHandler != nil {
-		return bot.undefinedCommandHandler(ctx)
+	if bot.opts.undefinedCommandHandler != nil {
+		return bot.opts.undefinedCommandHandler(ctx)
 	}
 	return ctx.ReplyText("Unrecognized command!!!")
 }
@@ -241,7 +193,7 @@ func (bot *Bot) startWorkers() {
 		}
 	}
 
-	for i := 0; i < bot.workerNum; i++ {
+	for i := 0; i < bot.opts.workerNum; i++ {
 		bot.wg.Add(1)
 		go startWorker()
 	}
@@ -257,20 +209,19 @@ func (bot *Bot) pollUpdates() {
 		}
 
 		updates, err := bot.api.GetUpdates(tgbotapi.UpdateConfig{
-			Limit:          bot.limit,
-			Offset:         bot.offset,
-			Timeout:        bot.updateTimeout,
-			AllowedUpdates: bot.allowedUpdates,
+			Limit:          bot.opts.limit,
+			Offset:         bot.opts.offset,
+			Timeout:        bot.opts.updateTimeout,
+			AllowedUpdates: bot.opts.allowedUpdates,
 		})
 		if err != nil && !errors.Is(err, context.Canceled) {
-			bot.errHandler(fmt.Errorf("failed to get updates, error: %w", err))
-			time.Sleep(3 * time.Second)
+			bot.opts.pollUpdatesErrorHandler(err)
 			continue
 		}
 
 		for _, update := range updates {
-			if update.UpdateID >= bot.offset {
-				bot.offset = update.UpdateID + 1
+			if update.UpdateID >= bot.opts.offset {
+				bot.opts.offset = update.UpdateID + 1
 				bot.updateC <- &update
 			}
 		}
@@ -278,7 +229,7 @@ func (bot *Bot) pollUpdates() {
 }
 
 func (bot *Bot) Run() error {
-	if bot.autoSetupCommands {
+	if bot.opts.autoSetupCommands {
 		// setup bot commands.
 		if err := bot.setupCommands(); err != nil {
 			return fmt.Errorf("failed to setup commands, error: %w", err)

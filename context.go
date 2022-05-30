@@ -19,113 +19,119 @@ type Context struct {
 }
 
 // Command return command name if message is non-nil.
-func (ctx *Context) Command() string {
-	if message := ctx.Message(); message != nil {
+func (c *Context) Command() string {
+	if message := c.Message(); message != nil {
 		return message.Command()
 	}
 	return ""
 }
 
 // IsCommand report whether the current message is a command.
-func (ctx *Context) IsCommand() bool {
-	if msg := ctx.Message(); msg != nil {
+func (c *Context) IsCommand() bool {
+	if msg := c.Message(); msg != nil {
 		return msg.IsCommand()
 	}
 	return false
 }
 
 // CommandArgs return command arguments if message is non-nil.
-func (ctx *Context) CommandArgs() string {
-	if message := ctx.Message(); message != nil {
+func (c *Context) CommandArgs() string {
+	if message := c.Message(); message != nil {
 		return message.CommandArguments()
 	}
 	return ""
 }
 
-func (ctx *Context) Message() *tgbotapi.Message {
+func (c *Context) Message() *tgbotapi.Message {
 	switch {
-	case ctx.update.Message != nil:
-		return ctx.update.Message
-	case ctx.update.EditedMessage != nil:
-		return ctx.update.EditedMessage
-	case ctx.update.ChannelPost != nil:
-		return ctx.update.ChannelPost
-	case ctx.update.EditedChannelPost != nil:
-		return ctx.update.EditedChannelPost
+	case c.update.Message != nil:
+		return c.update.Message
+	case c.update.EditedMessage != nil:
+		return c.update.EditedMessage
+	case c.update.ChannelPost != nil:
+		return c.update.ChannelPost
+	case c.update.EditedChannelPost != nil:
+		return c.update.EditedChannelPost
 	default:
 		return nil
 	}
 }
 
-func (ctx *Context) Update() *tgbotapi.Update {
-	return ctx.update
+func (c *Context) Update() *tgbotapi.Update {
+	return c.update
 }
 
-func (ctx *Context) SentFrom() *tgbotapi.User {
-	return ctx.update.SentFrom()
+func (c *Context) SentFrom() *tgbotapi.User {
+	return c.update.SentFrom()
 }
 
-func (ctx *Context) FromChat() *tgbotapi.Chat {
-	return ctx.update.FromChat()
+func (c *Context) FromChat() *tgbotapi.Chat {
+	return c.update.FromChat()
 }
 
 // ReplyText reply to the current chat.
-func (ctx *Context) ReplyText(text string, opts ...MessageConfigOption) error {
-	return ctx.reply(text, opts...)
+func (c *Context) ReplyText(text string, opts ...MessageConfigOption) error {
+	return c.reply(text, mergeOpts(opts,
+		WithDisableWebPagePreview(true),
+	)...)
 }
 
 // ReplyMarkdown reply to the current chat, text format is markdown.
-func (ctx *Context) ReplyMarkdown(text string, opts ...MessageConfigOption) error {
-	return ctx.reply(text, mergeOpts(opts,
+func (c *Context) ReplyMarkdown(text string, opts ...MessageConfigOption) error {
+	return c.reply(text, mergeOpts(opts,
 		WithMarkdown(),
 		WithDisableWebPagePreview(true),
 	)...)
 }
 
 // ReplyHTML reply to the current chat, text format is HTML.
-func (ctx *Context) ReplyHTML(text string, opts ...MessageConfigOption) error {
-	return ctx.reply(text, mergeOpts(opts,
+func (c *Context) ReplyHTML(text string, opts ...MessageConfigOption) error {
+	return c.reply(text, mergeOpts(opts,
 		WithHTML(),
 		WithDisableWebPagePreview(true),
 	)...)
 }
 
-func (ctx *Context) SendReply(chat tgbotapi.Chattable) error {
-	_, err := ctx.Request(chat)
+func (c *Context) SendReply(chat tgbotapi.Chattable) error {
+	_, err := c.Request(chat)
 	return err
 }
 
-func (ctx *Context) reply(text string, opts ...MessageConfigOption) error {
+func (c *Context) reply(text string, opts ...MessageConfigOption) error {
 	msg := tgbotapi.NewMessage(0, text)
-	if chat := ctx.update.FromChat(); chat != nil {
+	if chat := c.update.FromChat(); chat != nil {
 		msg.ChatID = chat.ID
 	}
 	for _, o := range opts {
 		o(&msg)
 	}
-	return ctx.SendReply(msg)
+	return c.SendReply(msg)
 }
 
-func (ctx *Context) WithContext(c context.Context) *Context {
-	nc := ctx.clone()
-	nc.Context = c
+// WithContext clone a Context for use in other goroutine.
+func (c *Context) WithContext(ctx context.Context) *Context {
+	nc := c.clone()
+	nc.Context = ctx
+	if cli, ok := nc.BotAPI.Client.(*client); ok {
+		nc.BotAPI.Client = cli.withContext(nc.Context)
+	}
 	return nc
 }
 
-func (ctx *Context) clone() *Context {
+func (c *Context) clone() *Context {
 	nc := new(Context)
-	*nc = *ctx
+	*nc = *c
 	return nc
 }
 
-func (ctx *Context) reset() {
-	ctx.update = nil
-	ctx.Context = nil
+func (c *Context) reset() {
+	c.update = nil
+	c.Context = nil
 }
 
-func (ctx *Context) put() {
-	ctx.reset()
-	ctx.bot.pool.Put(ctx)
+func (c *Context) put() {
+	c.reset()
+	c.bot.pool.Put(c)
 }
 
 func mergeOpts(opts []MessageConfigOption, def ...MessageConfigOption) []MessageConfigOption {

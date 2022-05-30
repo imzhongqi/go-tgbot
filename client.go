@@ -12,6 +12,10 @@ type client struct {
 	ctx context.Context
 }
 
+func (c *client) withContext(ctx context.Context) *client {
+	return &client{cli: c.cli, ctx: ctx}
+}
+
 func (c *client) Do(req *http.Request) (*http.Response, error) {
 	return c.cli.Do(req.WithContext(c.ctx))
 }
