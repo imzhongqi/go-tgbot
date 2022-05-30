@@ -96,6 +96,10 @@ func (bot *Bot) Commands() []*Command {
 }
 
 func (bot *Bot) setupCommands() error {
+	if !bot.opts.autoSetupCommands {
+		return nil
+	}
+
 	commands := make([]tgbotapi.BotCommand, 0, len(bot.commands))
 	for _, hdr := range bot.Commands() {
 		commands = append(commands, tgbotapi.BotCommand{
@@ -229,11 +233,9 @@ func (bot *Bot) pollUpdates() {
 }
 
 func (bot *Bot) Run() error {
-	if bot.opts.autoSetupCommands {
-		// setup bot commands.
-		if err := bot.setupCommands(); err != nil {
-			return fmt.Errorf("failed to setup commands, error: %w", err)
-		}
+	// setup bot commands.
+	if err := bot.setupCommands(); err != nil {
+		return fmt.Errorf("failed to setup commands, error: %w", err)
 	}
 
 	// start the worker.
