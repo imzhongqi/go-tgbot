@@ -23,7 +23,7 @@ type Bot struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	commands    []*Command
+	commands    map[CommandScope][]*Command
 	cmdHandlers map[string]Handler
 
 	updateC chan *tgbotapi.Update
@@ -63,8 +63,9 @@ func (bot *Bot) allocateContext() *Context {
 }
 
 func (bot *Bot) AddCommands(commands ...*Command) {
-	if bot.cmdHandlers == nil {
+	if bot.cmdHandlers == nil || bot.commands == nil {
 		bot.cmdHandlers = make(map[string]Handler)
+		bot.commands = make(map[CommandScope][]*Command)
 	}
 
 	for _, c := range commands {
@@ -81,18 +82,17 @@ func (bot *Bot) AddCommands(commands ...*Command) {
 		}
 
 		bot.cmdHandlers[c.Name] = c.Handler
-		bot.commands = append(bot.commands, c)
+		if c.Scopes == nil {
+			c.Scopes = append(c.Scopes, CommandScope{invalid: true})
+		}
+		for _, scope := range c.Scopes {
+			bot.commands[scope] = append(bot.commands[scope], c)
+		}
 	}
 }
 
-func (bot *Bot) Commands() []*Command {
-	commands := make([]*Command, 0, len(bot.commands))
-	for _, cmd := range bot.commands {
-		if !cmd.Hide {
-			commands = append(commands, cmd)
-		}
-	}
-	return commands
+func (bot *Bot) Commands() map[CommandScope][]*Command {
+	return bot.commands
 }
 
 func (bot *Bot) setupCommands() error {
@@ -100,20 +100,29 @@ func (bot *Bot) setupCommands() error {
 		return nil
 	}
 
-	commands := make([]tgbotapi.BotCommand, 0, len(bot.commands))
-	for _, hdr := range bot.Commands() {
-		commands = append(commands, tgbotapi.BotCommand{
-			Command:     hdr.Name,
-			Description: hdr.Description,
-		})
+	for scope, cmds := range bot.Commands() {
+		commands := make([]tgbotapi.BotCommand, 0, len(bot.commands))
+		for _, cmd := range cmds {
+			commands = append(commands, tgbotapi.BotCommand{
+				Command:     cmd.Name,
+				Description: cmd.Description,
+			})
+		}
+
+		if len(commands) == 0 {
+			continue
+		}
+
+		cmd := tgbotapi.NewSetMyCommands(commands...)
+		if !scope.invalid {
+			cmd = tgbotapi.NewSetMyCommandsWithScope(scope.toScope(), commands...)
+		}
+		if _, err := bot.api.Request(cmd); err != nil {
+			return err
+		}
 	}
 
-	if len(commands) == 0 {
-		return nil
-	}
-
-	_, err := bot.api.Request(tgbotapi.NewSetMyCommands(commands...))
-	return err
+	return nil
 }
 
 func (bot *Bot) handleUpdate(update *tgbotapi.Update) {
