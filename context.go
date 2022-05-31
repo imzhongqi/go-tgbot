@@ -44,12 +44,19 @@ func (c *Context) Message() *tgbotapi.Message {
 	switch {
 	case c.update.Message != nil:
 		return c.update.Message
+
 	case c.update.EditedMessage != nil:
 		return c.update.EditedMessage
+
+	case c.update.CallbackQuery != nil:
+		return c.update.CallbackQuery.Message
+
 	case c.update.ChannelPost != nil:
 		return c.update.ChannelPost
+
 	case c.update.EditedChannelPost != nil:
 		return c.update.EditedChannelPost
+
 	default:
 		return nil
 	}
