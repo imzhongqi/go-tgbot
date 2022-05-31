@@ -48,50 +48,50 @@ func (c CommandScope) toScope() tgbotapi.BotCommandScope {
 	}
 }
 
-// NewCommandScopeDefault represents the default scope of bot commands.
-func NewCommandScopeDefault() CommandScope {
+// CommandScopeDefault represents the default scope of bot commands.
+func CommandScopeDefault() CommandScope {
 	return CommandScope{Type: ScopeTypeDefault}
 }
 
-// NewCommandScopeAllPrivateChats represents the scope of bot commands,
+// CommandScopeAllPrivateChats represents the scope of bot commands,
 // covering all private chats.
-func NewCommandScopeAllPrivateChats() CommandScope {
+func CommandScopeAllPrivateChats() CommandScope {
 	return CommandScope{Type: ScopeTypeAllPrivateChats}
 }
 
-// NewCommandScopeAllGroupChats represents the scope of bot commands,
+// CommandScopeAllGroupChats represents the scope of bot commands,
 // covering all group and supergroup chats.
-func NewCommandScopeAllGroupChats() CommandScope {
+func CommandScopeAllGroupChats() CommandScope {
 	return CommandScope{Type: ScopeTypeAllGroupChats}
 }
 
-// NewCommandScopeAllChatAdministrators represents the scope of bot commands,
+// CommandScopeAllChatAdministrators represents the scope of bot commands,
 // covering all group and supergroup chat administrators.
-func NewCommandScopeAllChatAdministrators() CommandScope {
+func CommandScopeAllChatAdministrators() CommandScope {
 	return CommandScope{Type: ScopeTypeAllChatAdministrators}
 }
 
-// NewCommandScopeChat represents the scope of bot commands, covering a
+// CommandScopeChat represents the scope of bot commands, covering a
 // specific chat.
-func NewCommandScopeChat(chatID int64) CommandScope {
+func CommandScopeChat(chatID int64) CommandScope {
 	return CommandScope{
 		Type:   ScopeTypeChat,
 		ChatID: chatID,
 	}
 }
 
-// NewCommandScopeChatAdministrators represents the scope of bot commands,
+// CommandScopeChatAdministrators represents the scope of bot commands,
 // covering all administrators of a specific group or supergroup chat.
-func NewCommandScopeChatAdministrators(chatID int64) CommandScope {
+func CommandScopeChatAdministrators(chatID int64) CommandScope {
 	return CommandScope{
 		Type:   ScopeTypeChatAdministrators,
 		ChatID: chatID,
 	}
 }
 
-// NewCommandScopeChatMember represents the scope of bot commands, covering a
+// CommandScopeChatMember represents the scope of bot commands, covering a
 // specific member of a group or supergroup chat.
-func NewCommandScopeChatMember(chatID, userID int64) CommandScope {
+func CommandScopeChatMember(chatID, userID int64) CommandScope {
 	return CommandScope{
 		Type:   ScopeTypeChatMember,
 		ChatID: chatID,
