@@ -62,9 +62,12 @@ func (bot *Bot) allocateContext() *Context {
 	}
 }
 
+// AddCommands add commands to the bot.
 func (bot *Bot) AddCommands(commands ...*Command) {
-	if bot.cmdHandlers == nil || bot.commands == nil {
+	if bot.cmdHandlers == nil {
 		bot.cmdHandlers = make(map[string]Handler)
+	}
+	if bot.commands == nil {
 		bot.commands = make(map[CommandScope][]*Command)
 	}
 
@@ -100,23 +103,26 @@ func (bot *Bot) setupCommands() error {
 		return nil
 	}
 
-	for scope, cmds := range bot.Commands() {
-		commands := make([]tgbotapi.BotCommand, 0, len(bot.commands))
-		for _, cmd := range cmds {
-			commands = append(commands, tgbotapi.BotCommand{
+	for scope, commands := range bot.Commands() {
+		botCommands := make([]tgbotapi.BotCommand, 0, len(commands))
+		for _, cmd := range commands {
+			if cmd.Hide {
+				continue
+			}
+
+			botCommands = append(botCommands, tgbotapi.BotCommand{
 				Command:     cmd.Name,
 				Description: cmd.Description,
 			})
 		}
 
-		if len(commands) == 0 {
+		if len(botCommands) == 0 {
 			continue
 		}
 
-		cmd := tgbotapi.NewSetMyCommands(commands...)
+		cmd := tgbotapi.NewSetMyCommands(botCommands...)
 		if !scope.invalid {
-			cmd = tgbotapi.NewSetMyCommandsWithScope(scope.toScope(), commands...)
-			cmd.LanguageCode = scope.LanguageCode
+			cmd = tgbotapi.NewSetMyCommandsWithScopeAndLanguage(scope.toScope(), scope.LanguageCode, botCommands...)
 		}
 		if _, err := bot.api.Request(cmd); err != nil {
 			return err

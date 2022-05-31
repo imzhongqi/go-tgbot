@@ -92,7 +92,7 @@ func (c *Context) ReplyHTML(text string, opts ...MessageConfigOption) error {
 	)...)
 }
 
-// SendReply send reply
+// SendReply send reply.
 func (c *Context) SendReply(chat tgbotapi.Chattable) error {
 	_, err := c.Request(chat)
 	return err
