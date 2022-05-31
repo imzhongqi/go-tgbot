@@ -45,6 +45,7 @@ func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 
 	return &Bot{
 		api:     api,
+		opts:    o,
 		ctx:     ctx,
 		cancel:  cancel,
 		updateC: updateC,
