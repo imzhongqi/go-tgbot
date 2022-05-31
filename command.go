@@ -13,6 +13,8 @@ type CommandScope struct {
 	Type   string
 	ChatID int64
 	UserID int64
+
+	LanguageCode string
 }
 
 // Command is telegram command.

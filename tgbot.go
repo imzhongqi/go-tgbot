@@ -116,6 +116,7 @@ func (bot *Bot) setupCommands() error {
 		cmd := tgbotapi.NewSetMyCommands(commands...)
 		if !scope.invalid {
 			cmd = tgbotapi.NewSetMyCommandsWithScope(scope.toScope(), commands...)
+			cmd.LanguageCode = scope.LanguageCode
 		}
 		if _, err := bot.api.Request(cmd); err != nil {
 			return err
