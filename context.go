@@ -74,17 +74,17 @@ func (c *Context) FromChat() *tgbotapi.Chat {
 	return c.update.FromChat()
 }
 
-type MessageConfigOption func(c *tgbotapi.MessageConfig)
+type MessageOption func(c *tgbotapi.MessageConfig)
 
 // ReplyText reply to the current chat.
-func (c *Context) ReplyText(text string, opts ...MessageConfigOption) error {
+func (c *Context) ReplyText(text string, opts ...MessageOption) error {
 	return c.reply(text, mergeOpts(opts,
 		WithDisableWebPagePreview(true),
 	)...)
 }
 
 // ReplyMarkdown reply to the current chat, text format is markdown.
-func (c *Context) ReplyMarkdown(text string, opts ...MessageConfigOption) error {
+func (c *Context) ReplyMarkdown(text string, opts ...MessageOption) error {
 	return c.reply(text, mergeOpts(opts,
 		WithMarkdown(),
 		WithDisableWebPagePreview(true),
@@ -92,20 +92,14 @@ func (c *Context) ReplyMarkdown(text string, opts ...MessageConfigOption) error 
 }
 
 // ReplyHTML reply to the current chat, text format is HTML.
-func (c *Context) ReplyHTML(text string, opts ...MessageConfigOption) error {
+func (c *Context) ReplyHTML(text string, opts ...MessageOption) error {
 	return c.reply(text, mergeOpts(opts,
 		WithHTML(),
 		WithDisableWebPagePreview(true),
 	)...)
 }
 
-// SendReply send reply.
-func (c *Context) SendReply(chat tgbotapi.Chattable) error {
-	_, err := c.Request(chat)
-	return err
-}
-
-func (c *Context) reply(text string, opts ...MessageConfigOption) error {
+func (c *Context) reply(text string, opts ...MessageOption) error {
 	msg := tgbotapi.NewMessage(0, text)
 	if chat := c.update.FromChat(); chat != nil {
 		msg.ChatID = chat.ID
@@ -114,6 +108,12 @@ func (c *Context) reply(text string, opts ...MessageConfigOption) error {
 		o(&msg)
 	}
 	return c.SendReply(msg)
+}
+
+// SendReply send reply.
+func (c *Context) SendReply(chat tgbotapi.Chattable) error {
+	_, err := c.Request(chat)
+	return err
 }
 
 // WithContext clone a Context for use in other goroutine.
@@ -142,40 +142,40 @@ func (c *Context) put() {
 	c.bot.pool.Put(c)
 }
 
-func mergeOpts(opts []MessageConfigOption, def ...MessageConfigOption) []MessageConfigOption {
+func mergeOpts(opts []MessageOption, def ...MessageOption) []MessageOption {
 	return append(def, opts...)
 }
 
 // WithHTML set parse mode to html
-func WithHTML() MessageConfigOption {
+func WithHTML() MessageOption {
 	return func(c *tgbotapi.MessageConfig) {
 		c.ParseMode = tgbotapi.ModeHTML
 	}
 }
 
 // WithMarkdown set parse mode to markdown.
-func WithMarkdown() MessageConfigOption {
+func WithMarkdown() MessageOption {
 	return func(c *tgbotapi.MessageConfig) {
 		c.ParseMode = tgbotapi.ModeMarkdown
 	}
 }
 
 // WithMarkdownV2 set parse mode to markdown v2.
-func WithMarkdownV2() MessageConfigOption {
+func WithMarkdownV2() MessageOption {
 	return func(c *tgbotapi.MessageConfig) {
 		c.ParseMode = tgbotapi.ModeMarkdownV2
 	}
 }
 
 // WithDisableWebPagePreview disable web page preview.
-func WithDisableWebPagePreview(disable bool) MessageConfigOption {
+func WithDisableWebPagePreview(disable bool) MessageOption {
 	return func(c *tgbotapi.MessageConfig) {
 		c.DisableWebPagePreview = disable
 	}
 }
 
 // WithChatId set message chat id.
-func WithChatId(chatId int64) MessageConfigOption {
+func WithChatId(chatId int64) MessageOption {
 	return func(c *tgbotapi.MessageConfig) {
 		c.ChatID = chatId
 	}
