@@ -14,7 +14,7 @@ type Bot struct {
 	api *tgbotapi.BotAPI
 
 	// opts is bot options
-	opts *Options
+	opts *options
 
 	wg sync.WaitGroup
 
@@ -30,23 +30,25 @@ type Bot struct {
 }
 
 func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
-	bot := &Bot{
-		opts: newOptions(opts...),
-		api:  api,
-	}
+	o := newOptions(opts...)
 
-	bot.ctx, bot.cancel = context.WithCancel(bot.opts.ctx)
+	ctx, cancel := context.WithCancel(o.ctx)
 
 	// hijack the api client.
-	bot.api.Client = &client{cli: bot.api.Client, ctx: bot.ctx}
+	api.Client = &client{cli: api.Client, ctx: ctx}
 
 	// set the updateC size for pollUpdates.
-	if bot.opts.bufSize == 0 {
-		bot.opts.bufSize = bot.opts.limit
+	if o.bufSize == 0 {
+		o.bufSize = o.limit
 	}
-	bot.updateC = make(chan *tgbotapi.Update, bot.opts.bufSize)
+	updateC := make(chan *tgbotapi.Update, o.bufSize)
 
-	return bot
+	return &Bot{
+		api:     api,
+		ctx:     ctx,
+		cancel:  cancel,
+		updateC: updateC,
+	}
 }
 
 func (bot *Bot) allocateContext() *Context {

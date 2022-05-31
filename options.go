@@ -25,7 +25,7 @@ type PanicHandler func(*Context, interface{})
 // PollUpdatesErrorHandler is the handler that is called when an error occurs in the polling updates
 type PollUpdatesErrorHandler func(err error)
 
-type Options struct {
+type options struct {
 	ctx context.Context
 
 	// timeout is context timeout.
@@ -52,8 +52,8 @@ type Options struct {
 	allowedUpdates []string
 }
 
-func newOptions(opts ...Option) *Options {
-	options := &Options{
+func newOptions(opts ...Option) *options {
+	o := &options{
 		ctx: context.Background(),
 
 		autoSetupCommands: true,
@@ -65,27 +65,27 @@ func newOptions(opts ...Option) *Options {
 		limit:         100,
 	}
 
-	options.panicHandler = func(ctx *Context, v interface{}) {
-		options.errHandler(fmt.Errorf("tgbot panic: %v, stack: %s", v, debug.Stack()))
+	o.panicHandler = func(ctx *Context, v interface{}) {
+		o.errHandler(fmt.Errorf("tgbot panic: %v, stack: %s", v, debug.Stack()))
 	}
 
-	options.pollUpdatesErrorHandler = func(err error) {
-		options.errHandler(fmt.Errorf("failed to get updates, error: %w", err))
+	o.pollUpdatesErrorHandler = func(err error) {
+		o.errHandler(fmt.Errorf("failed to get updates, error: %w", err))
 		time.Sleep(3 * time.Second)
 	}
 
-	for _, o := range opts {
-		o(options)
+	for _, opt := range opts {
+		opt(o)
 	}
 
-	return options
+	return o
 }
 
-type Option func(b *Options)
+type Option func(b *options)
 
 // WithTimeout set context timeout.
 func WithTimeout(d time.Duration) Option {
-	return func(b *Options) {
+	return func(b *options) {
 		b.timeout = d
 	}
 }
@@ -93,14 +93,14 @@ func WithTimeout(d time.Duration) Option {
 // WithUpdateTimeout set the get updates updateTimeout,
 // timeout unit is seconds, max is 50 second.
 func WithUpdateTimeout(timeout int) Option {
-	return func(b *Options) {
+	return func(b *options) {
 		b.updateTimeout = timeout
 	}
 }
 
 // WithWorkerNum set the number of workers to process updates.
 func WithWorkerNum(n int) Option {
-	return func(b *Options) {
+	return func(b *options) {
 		if b.workerNum > 0 {
 			b.workerNum = n
 		}
@@ -109,70 +109,70 @@ func WithWorkerNum(n int) Option {
 
 // WithWorkerPool set the worker pool for execute handler if the workerPool is non-nil.
 func WithWorkerPool(p *ants.Pool) Option {
-	return func(b *Options) {
+	return func(b *options) {
 		b.workerPool = p
 	}
 }
 
 // WithUndefinedCmdHandler set how to handle undefined commands.
 func WithUndefinedCmdHandler(h Handler) Option {
-	return func(b *Options) {
+	return func(b *options) {
 		b.undefinedCommandHandler = h
 	}
 }
 
 // WithErrorHandler set error handler.
 func WithErrorHandler(h ErrHandler) Option {
-	return func(b *Options) {
+	return func(b *options) {
 		b.errHandler = h
 	}
 }
 
 // WithAutoSetupCommands will auto setup command to telegram if true.
 func WithAutoSetupCommands(v bool) Option {
-	return func(b *Options) {
+	return func(b *options) {
 		b.autoSetupCommands = v
 	}
 }
 
 // WithBufferSize set the buffer size for receive updates.
 func WithBufferSize(size int) Option {
-	return func(b *Options) {
+	return func(b *options) {
 		b.bufSize = size
 	}
 }
 
 // WithLimitUpdates set the get updates limit.
 func WithLimitUpdates(limit int) Option {
-	return func(b *Options) {
+	return func(b *options) {
 		b.limit = limit
 	}
 }
 
 // WithUpdatesHandler set the updates handler.
 func WithUpdatesHandler(handler UpdatesHandler) Option {
-	return func(b *Options) {
+	return func(b *options) {
 		b.updatesHandler = handler
 	}
 }
 
 // WithPanicHandler set panic handler.
 func WithPanicHandler(h PanicHandler) Option {
-	return func(b *Options) {
+	return func(b *options) {
 		b.panicHandler = h
 	}
 }
 
 // WithAllowedUpdates set allowed updates.
 func WithAllowedUpdates(v ...string) Option {
-	return func(b *Options) {
+	return func(b *options) {
 		b.allowedUpdates = v
 	}
 }
 
 // WithContext with the context.
 func WithContext(ctx context.Context) Option {
-	return func(b *Options) {
+	return func(b *options) {
 		b.ctx = ctx
 	}
 }
