@@ -27,6 +27,11 @@ type CommandScope struct {
 	LanguageCode string
 }
 
+func (cs CommandScope) WithLanguageCode(lang string) CommandScope {
+	cs.LanguageCode = lang
+	return cs
+}
+
 // Command is telegram command.
 type Command struct {
 	Name        string
