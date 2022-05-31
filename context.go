@@ -6,8 +6,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-type MessageConfigOption func(c *tgbotapi.MessageConfig)
-
 type Context struct {
 	context.Context
 
@@ -68,6 +66,8 @@ func (c *Context) SentFrom() *tgbotapi.User {
 func (c *Context) FromChat() *tgbotapi.Chat {
 	return c.update.FromChat()
 }
+
+type MessageConfigOption func(c *tgbotapi.MessageConfig)
 
 // ReplyText reply to the current chat.
 func (c *Context) ReplyText(text string, opts ...MessageConfigOption) error {
