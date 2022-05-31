@@ -27,9 +27,17 @@ type CommandScope struct {
 	LanguageCode string
 }
 
-func (cs CommandScope) WithLanguageCode(lang string) CommandScope {
-	cs.LanguageCode = lang
-	return cs
+func (c CommandScope) WithLanguageCode(lang string) CommandScope {
+	c.LanguageCode = lang
+	return c
+}
+
+func (c CommandScope) toScope() tgbotapi.BotCommandScope {
+	return tgbotapi.BotCommandScope{
+		Type:   c.Type,
+		ChatID: c.ChatID,
+		UserID: c.UserID,
+	}
 }
 
 // Command is telegram command.
@@ -43,14 +51,6 @@ type Command struct {
 
 func (c Command) String() string {
 	return fmt.Sprintf("/%s - %s", c.Name, c.Description)
-}
-
-func (c CommandScope) toScope() tgbotapi.BotCommandScope {
-	return tgbotapi.BotCommandScope{
-		Type:   c.Type,
-		ChatID: c.ChatID,
-		UserID: c.UserID,
-	}
 }
 
 // CommandScopeDefault represents the default scope of bot commands.
