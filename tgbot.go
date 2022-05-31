@@ -179,6 +179,7 @@ func (bot *Bot) undefinedCmdHandler(ctx *Context) error {
 	if bot.opts.undefinedCommandHandler != nil {
 		return bot.opts.undefinedCommandHandler(ctx)
 	}
+
 	return ctx.ReplyText("Unrecognized command!!!")
 }
 
