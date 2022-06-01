@@ -41,28 +41,46 @@ func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 	if o.bufSize == 0 {
 		o.bufSize = o.limit
 	}
-	updateC := make(chan *tgbotapi.Update, o.bufSize)
 
 	return &Bot{
 		api:     api,
 		opts:    o,
 		ctx:     ctx,
 		cancel:  cancel,
-		updateC: updateC,
+		updateC: make(chan *tgbotapi.Update, o.bufSize),
 	}
 }
 
-func (bot *Bot) allocateContext() *Context {
+func (bot *Bot) allocateContextWithUpdate(update *tgbotapi.Update) (c *Context, recycle func()) {
+	var (
+		ctx    = bot.ctx
+		cancel context.CancelFunc
+	)
+	if bot.opts.timeout > 0 {
+		ctx, cancel = context.WithTimeout(ctx, bot.opts.timeout)
+	}
+
+	recycle = func() {
+		if cancel != nil {
+			cancel()
+		}
+
+		c.reset()
+		bot.pool.Put(c)
+	}
+
 	if v := bot.pool.Get(); v != nil {
-		ctx := v.(*Context)
-		ctx.Context = bot.ctx
-		return ctx
+		c = v.(*Context)
+		c.Context = ctx
+		c.update = update
+		return c, recycle
 	}
+
 	return &Context{
-		Context: bot.ctx,
+		Context: ctx,
 		BotAPI:  bot.api,
-		bot:     bot,
-	}
+		update:  update,
+	}, recycle
 }
 
 // AddCommands add commands to the bot.
@@ -136,22 +154,16 @@ func (bot *Bot) setupCommands() error {
 }
 
 func (bot *Bot) handleUpdate(update *tgbotapi.Update) {
-	ctx := bot.allocateContext()
-	ctx.update = update
-
 	updateHandler := func() {
+		ctx, recycle := bot.allocateContextWithUpdate(update)
+		defer recycle()
+
 		if bot.opts.panicHandler != nil {
 			defer func() {
 				if e := recover(); e != nil {
 					bot.opts.panicHandler(ctx, e)
 				}
 			}()
-		}
-
-		if bot.opts.timeout > 0 {
-			var cancel context.CancelFunc
-			ctx.Context, cancel = context.WithTimeout(ctx.Context, bot.opts.timeout)
-			defer cancel()
 		}
 
 		switch {
@@ -161,14 +173,18 @@ func (bot *Bot) handleUpdate(update *tgbotapi.Update) {
 		default:
 			bot.updatesHandler(ctx)
 		}
-
-		ctx.put()
 	}
 
 	if bot.opts.workerPool != nil && !bot.opts.workerPool.IsClosed() {
 		if err := bot.opts.workerPool.Submit(updateHandler); err != nil {
 			bot.opts.errHandler(err)
 		}
+		return
+	}
+
+	// unlimited number of worker
+	if bot.opts.workerNum <= 0 {
+		go updateHandler()
 		return
 	}
 
@@ -217,7 +233,12 @@ func (bot *Bot) startWorkers() {
 		}
 	}
 
-	for i := 0; i < bot.opts.workerNum; i++ {
+	workerNum := bot.opts.workerNum
+	if workerNum <= 0 {
+		workerNum = 1
+	}
+
+	for i := 0; i < workerNum; i++ {
 		bot.wg.Add(1)
 		go startWorker()
 	}

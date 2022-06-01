@@ -53,6 +53,10 @@ func (c Command) String() string {
 	return fmt.Sprintf("/%s - %s", c.Name, c.Description)
 }
 
+func CommandScopes(scopes ...CommandScope) []CommandScope {
+	return scopes
+}
+
 // CommandScopeDefault represents the default scope of bot commands.
 func CommandScopeDefault() CommandScope {
 	return CommandScope{Type: ScopeTypeDefault}

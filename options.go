@@ -101,9 +101,7 @@ func WithUpdateTimeout(timeout int) Option {
 // WithWorkerNum set the number of workers to process updates.
 func WithWorkerNum(n int) Option {
 	return func(b *options) {
-		if b.workerNum > 0 {
-			b.workerNum = n
-		}
+		b.workerNum = n
 	}
 }
 

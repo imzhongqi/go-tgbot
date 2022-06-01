@@ -11,8 +11,6 @@ type Context struct {
 
 	*tgbotapi.BotAPI
 
-	bot *Bot
-
 	update *tgbotapi.Update
 }
 
@@ -135,11 +133,6 @@ func (c *Context) clone() *Context {
 func (c *Context) reset() {
 	c.update = nil
 	c.Context = nil
-}
-
-func (c *Context) put() {
-	c.reset()
-	c.bot.pool.Put(c)
 }
 
 func mergeOpts(opts []MessageOption, def ...MessageOption) []MessageOption {
