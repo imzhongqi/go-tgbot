@@ -31,8 +31,10 @@ type options struct {
 	// timeout is context timeout.
 	timeout time.Duration
 
-	// autoSetupCommands whether automatically set up commands.
-	autoSetupCommands bool
+	// disableAutoSetupCommands whether automatically set up commands.
+	disableAutoSetupCommands bool
+
+	disableHandleAllUpdateOnStop bool
 
 	undefinedCommandHandler Handler
 	errHandler              ErrHandler
@@ -56,8 +58,7 @@ func newOptions(opts ...Option) *options {
 	o := &options{
 		ctx: context.Background(),
 
-		autoSetupCommands: true,
-		errHandler:        func(err error) {},
+		errHandler: func(err error) {},
 
 		workerNum: runtime.GOMAXPROCS(0),
 
@@ -81,96 +82,102 @@ func newOptions(opts ...Option) *options {
 	return o
 }
 
-type Option func(b *options)
+type Option func(o *options)
 
 // WithTimeout set context timeout.
 func WithTimeout(d time.Duration) Option {
-	return func(b *options) {
-		b.timeout = d
+	return func(o *options) {
+		o.timeout = d
 	}
 }
 
 // WithUpdateTimeout set the get updates updateTimeout,
 // timeout unit is seconds, max is 50 second.
 func WithUpdateTimeout(timeout int) Option {
-	return func(b *options) {
-		b.updateTimeout = timeout
+	return func(o *options) {
+		o.updateTimeout = timeout
 	}
 }
 
 // WithWorkerNum set the number of workers to process updates.
 func WithWorkerNum(n int) Option {
-	return func(b *options) {
-		b.workerNum = n
+	return func(o *options) {
+		o.workerNum = n
 	}
 }
 
 // WithWorkerPool set the worker pool for execute handler if the workerPool is non-nil.
 func WithWorkerPool(p *ants.Pool) Option {
-	return func(b *options) {
-		b.workerPool = p
+	return func(o *options) {
+		o.workerPool = p
 	}
 }
 
 // WithUndefinedCmdHandler set how to handle undefined commands.
 func WithUndefinedCmdHandler(h Handler) Option {
-	return func(b *options) {
-		b.undefinedCommandHandler = h
+	return func(o *options) {
+		o.undefinedCommandHandler = h
 	}
 }
 
 // WithErrorHandler set error handler.
 func WithErrorHandler(h ErrHandler) Option {
-	return func(b *options) {
-		b.errHandler = h
+	return func(o *options) {
+		o.errHandler = h
 	}
 }
 
-// WithAutoSetupCommands will auto setup command to telegram if true.
-func WithAutoSetupCommands(v bool) Option {
-	return func(b *options) {
-		b.autoSetupCommands = v
+// WithDisableAutoSetupCommands disable auto setup telegram commands.
+func WithDisableAutoSetupCommands(v bool) Option {
+	return func(o *options) {
+		o.disableAutoSetupCommands = v
+	}
+}
+
+func WithDisableHandleAllUpdate(v bool) Option {
+	return func(o *options) {
+		o.disableHandleAllUpdateOnStop = v
 	}
 }
 
 // WithBufferSize set the buffer size for receive updates.
 func WithBufferSize(size int) Option {
-	return func(b *options) {
-		b.bufSize = size
+	return func(o *options) {
+		o.bufSize = size
 	}
 }
 
 // WithLimitUpdates set the get updates limit.
 func WithLimitUpdates(limit int) Option {
-	return func(b *options) {
-		b.limit = limit
+	return func(o *options) {
+		o.limit = limit
 	}
 }
 
 // WithUpdatesHandler set the updates handler.
 func WithUpdatesHandler(handler UpdatesHandler) Option {
-	return func(b *options) {
-		b.updatesHandler = handler
+	return func(o *options) {
+		o.updatesHandler = handler
 	}
 }
 
 // WithPanicHandler set panic handler.
 func WithPanicHandler(h PanicHandler) Option {
-	return func(b *options) {
-		b.panicHandler = h
+	return func(o *options) {
+		o.panicHandler = h
 	}
 }
 
 // WithAllowedUpdates set allowed updates.
 func WithAllowedUpdates(v ...string) Option {
-	return func(b *options) {
-		b.allowedUpdates = v
+	return func(o *options) {
+		o.allowedUpdates = v
 	}
 }
 
 // WithContext with the context.
 func WithContext(ctx context.Context) Option {
-	return func(b *options) {
-		b.ctx = ctx
+	return func(o *options) {
+		o.ctx = ctx
 	}
 }

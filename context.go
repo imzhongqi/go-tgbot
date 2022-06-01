@@ -39,6 +39,10 @@ func (c *Context) CommandArgs() string {
 }
 
 func (c *Context) Message() *tgbotapi.Message {
+	if c.update == nil {
+		return nil
+	}
+
 	switch {
 	case c.update.Message != nil:
 		return c.update.Message
@@ -65,10 +69,16 @@ func (c *Context) Update() *tgbotapi.Update {
 }
 
 func (c *Context) SentFrom() *tgbotapi.User {
+	if c.update == nil {
+		return nil
+	}
 	return c.update.SentFrom()
 }
 
 func (c *Context) FromChat() *tgbotapi.Chat {
+	if c.update == nil {
+		return nil
+	}
 	return c.update.FromChat()
 }
 

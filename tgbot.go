@@ -29,13 +29,11 @@ type Bot struct {
 	updateC chan *tgbotapi.Update
 }
 
+// NewBot new a telegram bot.
 func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
 	o := newOptions(opts...)
 
 	ctx, cancel := context.WithCancel(o.ctx)
-
-	// hijack the api client.
-	api.Client = &client{cli: api.Client, ctx: ctx}
 
 	// set the updateC size for pollUpdates.
 	if o.bufSize == 0 {
@@ -120,7 +118,7 @@ func (bot *Bot) Commands() map[CommandScope][]*Command {
 }
 
 func (bot *Bot) setupCommands() error {
-	if !bot.opts.autoSetupCommands {
+	if bot.opts.disableAutoSetupCommands {
 		return nil
 	}
 
@@ -153,8 +151,8 @@ func (bot *Bot) setupCommands() error {
 	return nil
 }
 
-func (bot *Bot) handleUpdate(update *tgbotapi.Update) {
-	updateHandler := func() {
+func (bot *Bot) makeUpdateHandler(update *tgbotapi.Update) func() {
+	return func() {
 		ctx, recycle := bot.allocateContextWithUpdate(update)
 		defer recycle()
 
@@ -174,6 +172,10 @@ func (bot *Bot) handleUpdate(update *tgbotapi.Update) {
 			bot.updatesHandler(ctx)
 		}
 	}
+}
+
+func (bot *Bot) handleUpdate(update *tgbotapi.Update) {
+	updateHandler := bot.makeUpdateHandler(update)
 
 	if bot.opts.workerPool != nil && !bot.opts.workerPool.IsClosed() {
 		if err := bot.opts.workerPool.Submit(updateHandler); err != nil {
@@ -244,7 +246,27 @@ func (bot *Bot) startWorkers() {
 	}
 }
 
+func (bot *Bot) startPollUpdates() {
+	bot.wg.Add(1)
+	go bot.pollUpdates()
+}
+
+func (bot *Bot) hijackAPI() *tgbotapi.BotAPI {
+	// clone a api and hijack the client.
+	api := new(tgbotapi.BotAPI)
+	*api = *bot.api
+	api.Client = &client{cli: bot.api.Client, ctx: bot.ctx}
+	return api
+}
+
 func (bot *Bot) pollUpdates() {
+	defer func() {
+		bot.wg.Done()
+		close(bot.updateC)
+	}()
+
+	api := bot.hijackAPI()
+
 	for {
 		select {
 		case <-bot.ctx.Done():
@@ -253,13 +275,17 @@ func (bot *Bot) pollUpdates() {
 		default:
 		}
 
-		updates, err := bot.api.GetUpdates(tgbotapi.UpdateConfig{
+		updates, err := api.GetUpdates(tgbotapi.UpdateConfig{
 			Limit:          bot.opts.limit,
 			Offset:         bot.opts.offset,
 			Timeout:        bot.opts.updateTimeout,
 			AllowedUpdates: bot.opts.allowedUpdates,
 		})
-		if err != nil && !errors.Is(err, context.Canceled) {
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return
+			}
+
 			bot.opts.pollUpdatesErrorHandler(err)
 			continue
 		}
@@ -283,7 +309,7 @@ func (bot *Bot) Run() error {
 	bot.startWorkers()
 
 	// start poll updates.
-	go bot.pollUpdates()
+	bot.startPollUpdates()
 
 	// wait all worker done.
 	bot.wg.Wait()
@@ -293,6 +319,18 @@ func (bot *Bot) Run() error {
 
 func (bot *Bot) Stop() context.Context {
 	bot.cancel()
+
+	if !bot.opts.disableHandleAllUpdateOnStop {
+		// must be processed until all updates are processed.
+		for update := range bot.updateC {
+			bot.wg.Add(1)
+			go func(update *tgbotapi.Update) {
+				defer bot.wg.Done()
+				bot.makeUpdateHandler(update)()
+			}(update)
+		}
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		bot.wg.Wait()
