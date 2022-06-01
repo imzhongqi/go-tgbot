@@ -19,10 +19,10 @@ type Handler func(ctx *Context) error
 // ErrHandler error handler.
 type ErrHandler func(err error)
 
-// PanicHandler is panic handler
+// PanicHandler is panic handler.
 type PanicHandler func(*Context, interface{})
 
-// PollUpdatesErrorHandler is the handler that is called when an error occurs in the polling updates
+// PollUpdatesErrorHandler is the handler that is called when an error occurs in the polling updates.
 type PollUpdatesErrorHandler func(err error)
 
 type options struct {
@@ -61,7 +61,7 @@ func newOptions(opts ...Option) *options {
 
 		workerNum: runtime.GOMAXPROCS(0),
 
-		updateTimeout: 50, // 50s is maximum timeout
+		updateTimeout: 50, // 50s is maximum timeout.
 		limit:         100,
 	}
 

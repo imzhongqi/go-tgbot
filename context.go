@@ -146,7 +146,7 @@ func mergeOpts(opts []MessageOption, def ...MessageOption) []MessageOption {
 	return append(def, opts...)
 }
 
-// WithHTML set parse mode to html
+// WithHTML set parse mode to html.
 func WithHTML() MessageOption {
 	return func(c *tgbotapi.MessageConfig) {
 		c.ParseMode = tgbotapi.ModeHTML
@@ -157,6 +157,27 @@ func WithHTML() MessageOption {
 func WithMarkdown() MessageOption {
 	return func(c *tgbotapi.MessageConfig) {
 		c.ParseMode = tgbotapi.ModeMarkdown
+	}
+}
+
+// WithInlineKeyboardMarkup set inline keyboard.
+func WithInlineKeyboardMarkup(markup tgbotapi.InlineKeyboardMarkup) MessageOption {
+	return func(c *tgbotapi.MessageConfig) {
+		c.ReplyMarkup = markup
+	}
+}
+
+// WithKeyboardMarkup set keyboard.
+func WithKeyboardMarkup(markup tgbotapi.ReplyKeyboardMarkup) MessageOption {
+	return func(c *tgbotapi.MessageConfig) {
+		c.ReplyMarkup = markup
+	}
+}
+
+// WithRemoveKeyboard remove keyboard.
+func WithRemoveKeyboard(markup tgbotapi.ReplyKeyboardRemove) MessageOption {
+	return func(c *tgbotapi.MessageConfig) {
+		c.ReplyMarkup = markup
 	}
 }
 
