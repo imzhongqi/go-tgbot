@@ -9,7 +9,7 @@ const (
 	ScopeTypeAllPrivateChats       = "all_private_chats"
 	ScopeTypeAllGroupChats         = "all_group_chats"
 	ScopeTypeAllChatAdministrators = "all_chat_administrators"
-	ScopeTypeChat                  = "all_chat_administrators"
+	ScopeTypeChat                  = "chat"
 	ScopeTypeChatAdministrators    = "chat_administrators"
 	ScopeTypeChatMember            = "chat_member"
 )
