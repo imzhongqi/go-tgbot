@@ -233,29 +233,29 @@ func (bot *Bot) undefinedCmdHandler(ctx *Context) error {
 	return ctx.ReplyText("Unrecognized command!!!")
 }
 
-func (bot *Bot) startWorkers() {
-	startWorker := func() {
-		defer bot.wg.Done()
+func (bot *Bot) startWorker() {
+	defer bot.wg.Done()
 
-		for {
-			select {
-			case <-bot.ctx.Done():
-				return
+	for {
+		select {
+		case <-bot.ctx.Done():
+			return
 
-			case update := <-bot.updateC:
-				bot.handleUpdate(update)
-			}
+		case update := <-bot.updateC:
+			bot.handleUpdate(update)
 		}
 	}
+}
 
-	workerNum := bot.opts.workerNum
-	if workerNum <= 0 {
-		workerNum = 1
+func (bot *Bot) startWorkers() {
+	if bot.opts.workerNum <= 0 {
+		go bot.startWorker()
+		return
 	}
 
-	for i := 0; i < workerNum; i++ {
+	for i := 0; i < bot.opts.workerNum; i++ {
 		bot.wg.Add(1)
-		go startWorker()
+		go bot.startWorker()
 	}
 }
 
