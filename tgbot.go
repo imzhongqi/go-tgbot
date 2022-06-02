@@ -107,7 +107,16 @@ func (bot *Bot) AddCommands(commands ...*Command) {
 		if len(c.Scopes) == 0 {
 			c.Scopes = append(c.Scopes, noScope)
 		}
+
+		// used to filter duplicate scope.
+		scopes := make(map[CommandScope]struct{})
+
 		for _, scope := range c.Scopes {
+			if _, ok := scopes[scope]; ok {
+				continue
+			}
+			scopes[scope] = struct{}{}
+
 			bot.commands[scope] = append(bot.commands[scope], c)
 		}
 	}
