@@ -128,8 +128,11 @@ func (c *Context) SendReply(chat tgbotapi.Chattable) error {
 func (c *Context) WithContext(ctx context.Context) *Context {
 	nc := c.clone()
 	nc.Context = ctx
-	if cli, ok := nc.BotAPI.Client.(*client); ok {
+	switch cli := nc.BotAPI.Client.(type) {
+	case *client:
 		nc.BotAPI.Client = cli.withContext(nc.Context)
+	default:
+		nc.BotAPI.Client = &client{cli: nc.BotAPI.Client, ctx: ctx}
 	}
 	return nc
 }
