@@ -27,6 +27,8 @@ type Bot struct {
 	cmdHandlers map[string]Handler
 
 	updateC chan *tgbotapi.Update
+
+	err error
 }
 
 // NewBot new a telegram bot.
@@ -248,12 +250,12 @@ func (bot *Bot) startWorker() {
 }
 
 func (bot *Bot) startWorkers() {
-	if bot.opts.workerNum <= 0 {
-		go bot.startWorker()
-		return
+	workNum := bot.opts.workerNum
+	if workNum <= 0 {
+		workNum = 1
 	}
 
-	for i := 0; i < bot.opts.workerNum; i++ {
+	for i := 0; i < workNum; i++ {
 		bot.wg.Add(1)
 		go bot.startWorker()
 	}
