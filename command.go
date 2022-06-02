@@ -2,8 +2,6 @@ package tgbot
 
 import (
 	"fmt"
-
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 const (
@@ -16,28 +14,39 @@ const (
 	ScopeTypeChatMember            = "chat_member"
 )
 
-// CommandScope represent a telegram command scope.
-type CommandScope struct {
-	invalid bool
+var noScope = &commandScope{}
 
-	Type   string
-	ChatID int64
-	UserID int64
-
-	LanguageCode string
+// CommandScope is command scope for telegram.
+type CommandScope interface {
+	Type() string
+	ChatID() int64
+	UserID() int64
+	LanguageCode() string
 }
 
-func (c CommandScope) WithLanguageCode(lang string) CommandScope {
-	c.LanguageCode = lang
-	return c
+// commandScope represent a telegram command scope.
+type commandScope struct {
+	typ    string
+	chatID int64
+	userID int64
+
+	languageCode string
 }
 
-func (c CommandScope) toScope() tgbotapi.BotCommandScope {
-	return tgbotapi.BotCommandScope{
-		Type:   c.Type,
-		ChatID: c.ChatID,
-		UserID: c.UserID,
-	}
+func (c commandScope) Type() string {
+	return c.typ
+}
+
+func (c commandScope) ChatID() int64 {
+	return c.chatID
+}
+
+func (c commandScope) UserID() int64 {
+	return c.userID
+}
+
+func (c commandScope) LanguageCode() string {
+	return c.languageCode
 }
 
 // Command is telegram command.
@@ -57,53 +66,57 @@ func CommandScopes(scopes ...CommandScope) []CommandScope {
 	return scopes
 }
 
+func CommandScopeNoScope() CommandScope {
+	return noScope
+}
+
 // CommandScopeDefault represents the default scope of bot commands.
 func CommandScopeDefault() CommandScope {
-	return CommandScope{Type: ScopeTypeDefault}
+	return commandScope{typ: ScopeTypeDefault}
 }
 
 // CommandScopeAllPrivateChats represents the scope of bot commands,
 // covering all private chats.
 func CommandScopeAllPrivateChats() CommandScope {
-	return CommandScope{Type: ScopeTypeAllPrivateChats}
+	return commandScope{typ: ScopeTypeAllPrivateChats}
 }
 
 // CommandScopeAllGroupChats represents the scope of bot commands,
 // covering all group and supergroup chats.
 func CommandScopeAllGroupChats() CommandScope {
-	return CommandScope{Type: ScopeTypeAllGroupChats}
+	return commandScope{typ: ScopeTypeAllGroupChats}
 }
 
 // CommandScopeAllChatAdministrators represents the scope of bot commands,
 // covering all group and supergroup chat administrators.
 func CommandScopeAllChatAdministrators() CommandScope {
-	return CommandScope{Type: ScopeTypeAllChatAdministrators}
+	return commandScope{typ: ScopeTypeAllChatAdministrators}
 }
 
 // CommandScopeChat represents the scope of bot commands, covering a
 // specific chat.
 func CommandScopeChat(chatID int64) CommandScope {
-	return CommandScope{
-		Type:   ScopeTypeChat,
-		ChatID: chatID,
+	return commandScope{
+		typ:    ScopeTypeChat,
+		chatID: chatID,
 	}
 }
 
 // CommandScopeChatAdministrators represents the scope of bot commands,
 // covering all administrators of a specific group or supergroup chat.
 func CommandScopeChatAdministrators(chatID int64) CommandScope {
-	return CommandScope{
-		Type:   ScopeTypeChatAdministrators,
-		ChatID: chatID,
+	return commandScope{
+		typ:    ScopeTypeChatAdministrators,
+		chatID: chatID,
 	}
 }
 
 // CommandScopeChatMember represents the scope of bot commands, covering a
 // specific member of a group or supergroup chat.
 func CommandScopeChatMember(chatID, userID int64) CommandScope {
-	return CommandScope{
-		Type:   ScopeTypeChatMember,
-		ChatID: chatID,
-		UserID: userID,
+	return commandScope{
+		typ:    ScopeTypeChatMember,
+		chatID: chatID,
+		userID: userID,
 	}
 }

@@ -104,8 +104,8 @@ func (bot *Bot) AddCommands(commands ...*Command) {
 		}
 
 		bot.cmdHandlers[c.Name] = c.Handler
-		if c.Scopes == nil {
-			c.Scopes = append(c.Scopes, CommandScope{invalid: true})
+		if len(c.Scopes) == 0 {
+			c.Scopes = append(c.Scopes, noScope)
 		}
 		for _, scope := range c.Scopes {
 			bot.commands[scope] = append(bot.commands[scope], c)
@@ -140,8 +140,12 @@ func (bot *Bot) setupCommands() error {
 		}
 
 		cmd := tgbotapi.NewSetMyCommands(botCommands...)
-		if !scope.invalid {
-			cmd = tgbotapi.NewSetMyCommandsWithScopeAndLanguage(scope.toScope(), scope.LanguageCode, botCommands...)
+		if scope != nil && scope != noScope {
+			cmd = tgbotapi.NewSetMyCommandsWithScopeAndLanguage(tgbotapi.BotCommandScope{
+				Type:   scope.Type(),
+				ChatID: scope.ChatID(),
+				UserID: scope.UserID(),
+			}, scope.LanguageCode(), botCommands...)
 		}
 		if _, err := bot.api.Request(cmd); err != nil {
 			return err
