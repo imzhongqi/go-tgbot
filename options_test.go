@@ -22,7 +22,7 @@ func TestNewOptions(t *testing.T) {
 		WithDisableHandleAllUpdateOnStop(true),
 		WithTimeout(timeout),
 		WithGetUpdatesTimeout(updateTimeout),
-		WithWorkerNum(workerNum),
+		WithWorkersNum(workerNum),
 		WithUndefinedCmdHandler(nil),
 		WithBufferSize(bufferSize),
 		WithGetUpdatesAllowedUpdates(allowedUpdates...),
@@ -52,8 +52,8 @@ func TestNewOptions(t *testing.T) {
 		t.Errorf("o.updateTimeout except %v, got: %v", updateTimeout, o.updateTimeout)
 	}
 
-	if o.workerNum != workerNum {
-		t.Errorf("o.workerNum except %v, got: %v", workerNum, o.workerNum)
+	if o.workersNum != workerNum {
+		t.Errorf("o.workersNum except %v, got: %v", workerNum, o.workersNum)
 	}
 
 	if o.undefinedCommandHandler != nil {

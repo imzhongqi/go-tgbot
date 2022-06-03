@@ -41,8 +41,8 @@ type options struct {
 	// pollUpdatesErrorHandler is the handler that is called when an error occurs in the polling updates.
 	pollUpdatesErrorHandler ErrHandler
 
-	workerNum  int
-	workerPool *ants.Pool
+	workersNum  int
+	workersPool *ants.Pool
 
 	// bufSize is updateC chan buffer size.
 	bufSize int
@@ -59,7 +59,7 @@ func newOptions(opts ...Option) *options {
 
 		errHandler: func(err error) {},
 
-		workerNum: runtime.GOMAXPROCS(0),
+		workersNum: runtime.GOMAXPROCS(0),
 
 		updateTimeout: 50, // 50s is maximum timeout.
 		limit:         100,
@@ -97,17 +97,17 @@ func WithTimeout(d time.Duration) Option {
 	}
 }
 
-// WithWorkerNum set the number of workers to process updates.
-func WithWorkerNum(n int) Option {
+// WithWorkersNum set the number of workers to process updates.
+func WithWorkersNum(n int) Option {
 	return func(o *options) {
-		o.workerNum = n
+		o.workersNum = n
 	}
 }
 
-// WithWorkerPool set the worker pool for execute handler if the workerPool is non-nil.
-func WithWorkerPool(p *ants.Pool) Option {
+// WithWorkersPool set the worker pool for execute handler if the workersPool is non-nil.
+func WithWorkersPool(p *ants.Pool) Option {
 	return func(o *options) {
-		o.workerPool = p
+		o.workersPool = p
 	}
 }
 

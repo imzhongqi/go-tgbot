@@ -24,7 +24,7 @@ func ExampleNewBot() {
 	bot := tgbot.NewBot(api,
 		tgbot.WithTimeout(2*time.Second),
 
-		tgbot.WithWorkerPool(pool),
+		tgbot.WithWorkersPool(pool),
 
 		tgbot.WithUpdatesHandler(func(ctx *tgbot.Context) {
 			err := ctx.ReplyText(ctx.Update().Message.Text, func(c *tgbotapi.MessageConfig) {

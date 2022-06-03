@@ -196,15 +196,15 @@ func (bot *Bot) makeUpdateHandler(update *tgbotapi.Update) func() {
 func (bot *Bot) handleUpdate(update *tgbotapi.Update) {
 	updateHandler := bot.makeUpdateHandler(update)
 
-	if bot.opts.workerPool != nil && !bot.opts.workerPool.IsClosed() {
-		if err := bot.opts.workerPool.Submit(updateHandler); err != nil {
+	if bot.opts.workersPool != nil && !bot.opts.workersPool.IsClosed() {
+		if err := bot.opts.workersPool.Submit(updateHandler); err != nil {
 			bot.opts.errHandler(err)
 		}
 		return
 	}
 
 	// unlimited number of worker
-	if bot.opts.workerNum <= 0 {
+	if bot.opts.workersNum <= 0 {
 		go updateHandler()
 		return
 	}
@@ -254,7 +254,7 @@ func (bot *Bot) startWorker() {
 }
 
 func (bot *Bot) startWorkers() {
-	workNum := bot.opts.workerNum
+	workNum := bot.opts.workersNum
 	if workNum <= 0 {
 		workNum = 1
 	}
