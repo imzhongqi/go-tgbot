@@ -33,6 +33,10 @@ type Bot struct {
 
 // NewBot new a telegram bot.
 func NewBot(api *tgbotapi.BotAPI, opts ...Option) *Bot {
+	if api == nil {
+		panic("tgbot: api is nil, api must be a non-nil")
+	}
+
 	o := newOptions(opts...)
 
 	ctx, cancel := context.WithCancel(o.ctx)
@@ -95,11 +99,11 @@ func (bot *Bot) AddCommands(commands ...*Command) {
 	for _, c := range commands {
 		switch {
 		case c.Name == "":
-			panic("command name must be non-empty")
+			panic("tgbot: command name must be non-empty")
 		case c.Description == "":
-			panic("command description must be non-empty")
+			panic("tgbot: command description must be non-empty")
 		case c.Handler == nil:
-			panic("command handler must be non-nil")
+			panic("tgbot: command handler must be non-nil")
 		}
 		if _, ok := bot.cmdHandlers[c.Name]; ok {
 			panic("duplicate command name: " + c.Name)

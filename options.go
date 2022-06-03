@@ -22,9 +22,6 @@ type ErrHandler func(err error)
 // PanicHandler is panic handler.
 type PanicHandler func(*Context, interface{})
 
-// PollUpdatesErrorHandler is the handler that is called when an error occurs in the polling updates.
-type PollUpdatesErrorHandler func(err error)
-
 type options struct {
 	ctx context.Context
 
@@ -40,7 +37,9 @@ type options struct {
 	errHandler              ErrHandler
 	updatesHandler          UpdatesHandler
 	panicHandler            PanicHandler
-	pollUpdatesErrorHandler PollUpdatesErrorHandler
+
+	// pollUpdatesErrorHandler is the handler that is called when an error occurs in the polling updates.
+	pollUpdatesErrorHandler ErrHandler
 
 	workerNum  int
 	workerPool *ants.Pool
@@ -84,18 +83,17 @@ func newOptions(opts ...Option) *options {
 
 type Option func(o *options)
 
+// WithContext with the context.
+func WithContext(ctx context.Context) Option {
+	return func(o *options) {
+		o.ctx = ctx
+	}
+}
+
 // WithTimeout set context timeout.
 func WithTimeout(d time.Duration) Option {
 	return func(o *options) {
 		o.timeout = d
-	}
-}
-
-// WithUpdateTimeout set the get updates updateTimeout,
-// timeout unit is seconds, max is 50 second.
-func WithUpdateTimeout(timeout int) Option {
-	return func(o *options) {
-		o.updateTimeout = timeout
 	}
 }
 
@@ -134,7 +132,8 @@ func WithDisableAutoSetupCommands(v bool) Option {
 	}
 }
 
-func WithDisableHandleAllUpdate(v bool) Option {
+// WithDisableHandleAllUpdateOnStop disable handle all updates on stop.
+func WithDisableHandleAllUpdateOnStop(v bool) Option {
 	return func(o *options) {
 		o.disableHandleAllUpdateOnStop = v
 	}
@@ -144,13 +143,6 @@ func WithDisableHandleAllUpdate(v bool) Option {
 func WithBufferSize(size int) Option {
 	return func(o *options) {
 		o.bufSize = size
-	}
-}
-
-// WithLimitUpdates set the get updates limit.
-func WithLimitUpdates(limit int) Option {
-	return func(o *options) {
-		o.limit = limit
 	}
 }
 
@@ -168,16 +160,24 @@ func WithPanicHandler(h PanicHandler) Option {
 	}
 }
 
-// WithAllowedUpdates set allowed updates.
-func WithAllowedUpdates(v ...string) Option {
+// WithGetUpdatesTimeout set the get updates updateTimeout,
+// timeout unit is seconds, max is 50 second.
+func WithGetUpdatesTimeout(timeout int) Option {
 	return func(o *options) {
-		o.allowedUpdates = v
+		o.updateTimeout = timeout
 	}
 }
 
-// WithContext with the context.
-func WithContext(ctx context.Context) Option {
+// WithGetUpdatesLimit set the get updates limit.
+func WithGetUpdatesLimit(limit int) Option {
 	return func(o *options) {
-		o.ctx = ctx
+		o.limit = limit
+	}
+}
+
+// WithGetUpdatesAllowedUpdates set allowed updates.
+func WithGetUpdatesAllowedUpdates(v ...string) Option {
+	return func(o *options) {
+		o.allowedUpdates = v
 	}
 }

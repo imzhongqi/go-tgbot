@@ -2,6 +2,7 @@ package tgbot_test
 
 import (
 	"log"
+	"testing"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -52,4 +53,13 @@ func ExampleNewBot() {
 	if err := bot.Run(); err != nil {
 		panic(err)
 	}
+}
+
+func TestNewBot(t *testing.T) {
+	defer func() {
+		if e := recover(); e == nil {
+			t.Error("must be trigger panic")
+		}
+	}()
+	tgbot.NewBot(nil)
 }
