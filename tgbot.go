@@ -203,7 +203,7 @@ func (bot *Bot) handleUpdate(update *tgbotapi.Update) {
 		return
 	}
 
-	// unlimited number of worker
+	// unlimited number of workers.
 	if bot.opts.workersNum <= 0 {
 		go updateHandler()
 		return

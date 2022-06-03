@@ -42,10 +42,12 @@ func main() {
 	bot := tgbot.NewBot(api,
 		tgbot.WithTimeout(2*time.Second),
 		
-		tgbot.WithWorkerPool(pool),
+		// tgbot.WithWorkersNum(-1), // use can use unlimited workers.
+		
+		tgbot.WithWorkersPool(pool),
 
 		tgbot.WithUpdatesHandler(func(ctx *tgbot.Context) {
-			err := ctx.ReplyText(ctx.Update().Message.Text, func(c *tgbotapi.MessageConfig) {
+			err := ctx.ReplyText(ctx.Message().Text, func(c *tgbotapi.MessageConfig) {
 				c.ReplyToMessageID = ctx.Message().MessageID
 			})
 			if err != nil {
@@ -61,12 +63,18 @@ func main() {
 			log.Println(err)
 		}),
 	)
+	
 	bot.AddCommands(&tgbot.Command{
 		Name:        "ping",
 		Description: "ping the bot",
 		Handler: func(ctx *tgbot.Context) error {
 			return ctx.ReplyMarkdown("hello,world")
 		},
+		Scopes: tgbot.CommandScopes(
+			tgbot.CommandScopeAllPrivateChats(),
+			tgbot.CommandScopeAllChatAdministrators(),
+			tgbot.CommandScopeChat(1000), // this is your chat id.
+		),
 	})
 	if err := bot.Run(); err != nil {
 		panic(err)
