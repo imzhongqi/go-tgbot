@@ -27,8 +27,6 @@ type Bot struct {
 	cmdHandlers map[string]Handler
 
 	updateC chan *tgbotapi.Update
-
-	err error
 }
 
 // NewBot new a telegram bot.
