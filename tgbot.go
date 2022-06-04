@@ -105,11 +105,12 @@ func (bot *Bot) AddCommands(commands ...*Command) {
 		case c.Handler == nil:
 			panic("tgbot: command handler must be non-nil")
 		}
+
 		if _, ok := bot.cmdHandlers[c.Name]; ok {
 			panic("duplicate command name: " + c.Name)
 		}
-
 		bot.cmdHandlers[c.Name] = c.Handler
+
 		if len(c.Scopes) == 0 {
 			c.Scopes = append(c.Scopes, noScope)
 		}
