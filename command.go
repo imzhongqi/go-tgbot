@@ -56,7 +56,7 @@ type Command struct {
 	Handler     Handler
 
 	hide   bool // hide the command on telegram commands menu.
-	scopes []CommandScope
+	scopes map[CommandScope]struct{}
 }
 
 type CommandOption func(cmd *Command)
@@ -69,15 +69,12 @@ func WithHide(v bool) CommandOption {
 
 func WithScopes(scopes ...CommandScope) CommandOption {
 	return func(cmd *Command) {
-		cmd.scopes = make([]CommandScope, 0, len(scopes))
-
-		scopeSet := make(map[CommandScope]struct{})
+		cmd.scopes = make(map[CommandScope]struct{})
 		for _, scope := range scopes {
-			if _, ok := scopeSet[scope]; ok {
+			if _, ok := cmd.scopes[scope]; ok {
 				continue
 			}
-			scopeSet[scope] = struct{}{}
-			cmd.scopes = append(cmd.scopes, scope)
+			cmd.scopes[scope] = struct{}{}
 		}
 	}
 }
@@ -99,7 +96,11 @@ func (c Command) String() string {
 }
 
 func (c *Command) Scopes() []CommandScope {
-	return c.scopes
+	scopes := make([]CommandScope, 0, len(c.scopes))
+	for scope := range c.scopes {
+		scopes = append(scopes, scope)
+	}
+	return scopes
 }
 
 func CommandScopeNoScope() CommandScope {

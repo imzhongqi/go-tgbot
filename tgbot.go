@@ -104,10 +104,6 @@ func (bot *Bot) AddCommands(commands ...*Command) {
 			panic("duplicate command name: " + c.Name)
 		}
 
-		if len(c.scopes) == 0 {
-			c.scopes = append(c.scopes, noScope)
-		}
-
 		bot.commands[c.Name] = c
 	}
 }
@@ -119,7 +115,14 @@ func (bot *Bot) Commands() map[string]*Command {
 func (bot *Bot) CommandsWithScope() map[CommandScope][]*Command {
 	commandGroups := make(map[CommandScope][]*Command)
 	for _, cmd := range bot.commands {
-		for _, scope := range cmd.scopes {
+
+		// process no scope command.
+		if len(cmd.scopes) == 0 {
+			commandGroups[noScope] = append(commandGroups[noScope], cmd)
+			continue
+		}
+
+		for scope := range cmd.scopes {
 			commandGroups[scope] = append(commandGroups[scope], cmd)
 		}
 	}
