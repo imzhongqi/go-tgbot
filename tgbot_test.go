@@ -27,7 +27,7 @@ func ExampleNewBot() {
 		tgbot.WithWorkersPool(pool),
 
 		tgbot.WithUpdatesHandler(func(ctx *tgbot.Context) {
-			err := ctx.ReplyText(ctx.Update().Message.Text, func(c *tgbotapi.MessageConfig) {
+			err := ctx.ReplyText(ctx.Message().Text, func(c *tgbotapi.MessageConfig) {
 				c.ReplyToMessageID = ctx.Message().MessageID
 			})
 			if err != nil {
@@ -43,13 +43,18 @@ func ExampleNewBot() {
 			log.Println(err)
 		}),
 	)
-	bot.AddCommands(&tgbot.Command{
-		Name:        "ping",
-		Description: "ping the bot",
-		Handler: func(ctx *tgbot.Context) error {
-			return ctx.ReplyMarkdown("hello,world")
+	bot.AddCommands(
+		tgbot.NewCommand("ping", "ping the bot", func(ctx *tgbot.Context) error {
+			return ctx.ReplyMarkdown("pong")
 		},
-	})
+			tgbot.WithHide(true),
+			tgbot.WithScopes(
+				tgbot.CommandScopeDefault(),
+				tgbot.CommandScopeAllGroupChats(),
+				tgbot.CommandScopeChat(100),
+			),
+		),
+	)
 	if err := bot.Run(); err != nil {
 		panic(err)
 	}

@@ -38,7 +38,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	
+
 	bot := tgbot.NewBot(api,
 		tgbot.WithTimeout(2*time.Second),
 		
@@ -64,18 +64,18 @@ func main() {
 		}),
 	)
 	
-	bot.AddCommands(&tgbot.Command{
-		Name:        "ping",
-		Description: "ping the bot",
-		Handler: func(ctx *tgbot.Context) error {
-			return ctx.ReplyMarkdown("hello,world")
+	bot.AddCommands(
+		tgbot.NewCommand("ping", "ping the bot", func(ctx *tgbot.Context) error {
+			return ctx.ReplyMarkdown("pong")
 		},
-		Scopes: tgbot.CommandScopes(
-			tgbot.CommandScopeAllPrivateChats(),
-			tgbot.CommandScopeAllChatAdministrators(),
-			tgbot.CommandScopeChat(1000), // this is your chat id.
+			tgbot.WithHide(true),
+			tgbot.WithScopes(
+				tgbot.CommandScopeDefault(),
+				tgbot.CommandScopeAllGroupChats(),
+				tgbot.CommandScopeChat(100),
+			),
 		),
-	})
+	)
 	if err := bot.Run(); err != nil {
 		panic(err)
 	}
