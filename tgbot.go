@@ -23,8 +23,7 @@ type Bot struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	commands    map[CommandScope][]*Command
-	cmdHandlers map[string]Handler
+	commands map[string]*Command
 
 	updateC chan *tgbotapi.Update
 }
@@ -87,11 +86,8 @@ func (bot *Bot) allocateContextWithUpdate(update *tgbotapi.Update) (c *Context, 
 
 // AddCommands add commands to the bot.
 func (bot *Bot) AddCommands(commands ...*Command) {
-	if bot.cmdHandlers == nil {
-		bot.cmdHandlers = make(map[string]Handler)
-	}
 	if bot.commands == nil {
-		bot.commands = make(map[CommandScope][]*Command)
+		bot.commands = make(map[string]*Command)
 	}
 
 	for _, c := range commands {
@@ -104,31 +100,30 @@ func (bot *Bot) AddCommands(commands ...*Command) {
 			panic("tgbot: command handler must be non-nil")
 		}
 
-		if _, ok := bot.cmdHandlers[c.Name]; ok {
+		if _, ok := bot.commands[c.Name]; ok {
 			panic("duplicate command name: " + c.Name)
 		}
-		bot.cmdHandlers[c.Name] = c.Handler
 
-		if len(c.Scopes) == 0 {
-			c.Scopes = append(c.Scopes, noScope)
+		if len(c.scopes) == 0 {
+			c.scopes = append(c.scopes, noScope)
 		}
 
-		// used to filter duplicate scope.
-		scopes := make(map[CommandScope]struct{})
-
-		for _, scope := range c.Scopes {
-			if _, ok := scopes[scope]; ok {
-				continue
-			}
-			scopes[scope] = struct{}{}
-
-			bot.commands[scope] = append(bot.commands[scope], c)
-		}
+		bot.commands[c.Name] = c
 	}
 }
 
-func (bot *Bot) Commands() map[CommandScope][]*Command {
+func (bot *Bot) Commands() map[string]*Command {
 	return bot.commands
+}
+
+func (bot *Bot) CommandsWithScope() map[CommandScope][]*Command {
+	commandGroups := make(map[CommandScope][]*Command)
+	for _, cmd := range bot.commands {
+		for _, scope := range cmd.scopes {
+			commandGroups[scope] = append(commandGroups[scope], cmd)
+		}
+	}
+	return commandGroups
 }
 
 func (bot *Bot) setupCommands() error {
@@ -136,10 +131,10 @@ func (bot *Bot) setupCommands() error {
 		return nil
 	}
 
-	for scope, commands := range bot.Commands() {
+	for scope, commands := range bot.CommandsWithScope() {
 		botCommands := make([]tgbotapi.BotCommand, 0, len(commands))
 		for _, cmd := range commands {
-			if cmd.Hide {
+			if cmd.hide {
 				continue
 			}
 
@@ -183,7 +178,7 @@ func (bot *Bot) makeUpdateHandler(update *tgbotapi.Update) func() {
 		}
 
 		switch {
-		case bot.cmdHandlers != nil && ctx.IsCommand():
+		case bot.commands != nil && ctx.IsCommand():
 			bot.commandHandler(ctx)
 
 		default:
@@ -212,9 +207,10 @@ func (bot *Bot) handleUpdate(update *tgbotapi.Update) {
 }
 
 func (bot *Bot) commandHandler(ctx *Context) {
-	handler, ok := bot.cmdHandlers[ctx.Command()]
-	if !ok {
-		handler = bot.undefinedCmdHandler
+	handler := bot.undefinedCmdHandler
+
+	if cmd, ok := bot.commands[ctx.Command()]; ok {
+		handler = cmd.Handler
 	}
 
 	if err := handler(ctx); err != nil {

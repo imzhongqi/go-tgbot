@@ -53,17 +53,53 @@ func (c commandScope) LanguageCode() string {
 type Command struct {
 	Name        string
 	Description string
-	Hide        bool // hide the command on telegram commands menu.
-	Scopes      []CommandScope
 	Handler     Handler
+
+	hide   bool // hide the command on telegram commands menu.
+	scopes []CommandScope
+}
+
+type CommandOption func(cmd *Command)
+
+func WithHide(v bool) CommandOption {
+	return func(cmd *Command) {
+		cmd.hide = v
+	}
+}
+
+func WithScopes(scopes ...CommandScope) CommandOption {
+	return func(cmd *Command) {
+		cmd.scopes = make([]CommandScope, 0, len(scopes))
+
+		scopeSet := make(map[CommandScope]struct{})
+		for _, scope := range scopes {
+			if _, ok := scopeSet[scope]; ok {
+				continue
+			}
+			scopeSet[scope] = struct{}{}
+			cmd.scopes = append(cmd.scopes, scope)
+		}
+	}
+}
+
+func NewCommand(name, desc string, handler Handler, opts ...CommandOption) *Command {
+	cmd := &Command{
+		Name:        name,
+		Description: desc,
+		Handler:     handler,
+	}
+	for _, opt := range opts {
+		opt(cmd)
+	}
+	return cmd
 }
 
 func (c Command) String() string {
 	return fmt.Sprintf("/%s - %s", c.Name, c.Description)
 }
 
-func CommandScopes(scopes ...CommandScope) []CommandScope {
-	return scopes
+func (c *Command) Scopes() []CommandScope {
+	return c.scopes
 }
 
 func CommandScopeNoScope() CommandScope {
