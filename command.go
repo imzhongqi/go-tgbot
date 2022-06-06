@@ -71,9 +71,6 @@ func WithScopes(scopes ...CommandScope) CommandOption {
 	return func(cmd *Command) {
 		cmd.scopes = make(map[CommandScope]struct{})
 		for _, scope := range scopes {
-			if _, ok := cmd.scopes[scope]; ok {
-				continue
-			}
 			cmd.scopes[scope] = struct{}{}
 		}
 	}
