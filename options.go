@@ -6,8 +6,6 @@ import (
 	"runtime"
 	"runtime/debug"
 	"time"
-
-	"github.com/panjf2000/ants/v2"
 )
 
 // UpdatesHandler handler another update.
@@ -42,7 +40,7 @@ type options struct {
 	pollUpdatesErrorHandler ErrHandler
 
 	workersNum  int
-	workersPool *ants.Pool
+	workersPool Pool
 
 	// bufSize is updateC chan buffer size.
 	bufSize int
@@ -105,7 +103,7 @@ func WithWorkersNum(n int) Option {
 }
 
 // WithWorkersPool set the worker pool for execute handler if the workersPool is non-nil.
-func WithWorkersPool(p *ants.Pool) Option {
+func WithWorkersPool(p Pool) Option {
 	return func(o *options) {
 		o.workersPool = p
 	}

@@ -243,7 +243,7 @@ func (bot *Bot) handleUpdate(update *tgbotapi.Update) {
 	updateHandler := bot.makeUpdateHandler(update)
 
 	if bot.opts.workersPool != nil && !bot.opts.workersPool.IsClosed() {
-		if err := bot.opts.workersPool.Submit(updateHandler); err != nil {
+		if err := bot.opts.workersPool.Go(updateHandler); err != nil {
 			bot.opts.errHandler(err)
 		}
 		return
