@@ -92,6 +92,10 @@ func (c Command) String() string {
 	return fmt.Sprintf("/%s - %s", c.Name, c.Description)
 }
 
+func (c *Command) Hide() bool {
+	return c.hide
+}
+
 func (c *Command) Scopes() []CommandScope {
 	scopes := make([]CommandScope, 0, len(c.scopes))
 	for scope := range c.scopes {
