@@ -56,7 +56,7 @@ type Command struct {
 	Handler     Handler
 
 	hide   bool // hide the command on telegram commands menu.
-	scopes map[CommandScope]struct{}
+	scopes []CommandScope
 }
 
 type CommandOption func(cmd *Command)
@@ -67,11 +67,21 @@ func WithHide(v bool) CommandOption {
 	}
 }
 
+func makeScopeKey(scope CommandScope) string {
+	return fmt.Sprintf("type:%s,language:%s,chat:%d,user:%d", scope.Type(), scope.LanguageCode(), scope.ChatID(), scope.UserID())
+}
+
 func WithScopes(scopes ...CommandScope) CommandOption {
 	return func(cmd *Command) {
-		cmd.scopes = make(map[CommandScope]struct{})
+		cmd.scopes = make([]CommandScope, 0)
+		scopeSet := make(map[string]struct{}, len(scopes))
 		for _, scope := range scopes {
-			cmd.scopes[scope] = struct{}{}
+			key := makeScopeKey(scope)
+			if _, ok := scopeSet[key]; ok {
+				continue
+			}
+			scopeSet[key] = struct{}{}
+			cmd.scopes = append(cmd.scopes, scope)
 		}
 	}
 }
@@ -97,64 +107,70 @@ func (c *Command) Hide() bool {
 }
 
 func (c *Command) Scopes() []CommandScope {
-	scopes := make([]CommandScope, 0, len(c.scopes))
-	for scope := range c.scopes {
-		scopes = append(scopes, scope)
-	}
-	return scopes
+	return c.scopes
 }
 
 func CommandScopeNoScope() CommandScope {
 	return noScope
 }
 
+func lang(lc ...string) string {
+	if len(lc) > 0 {
+		return lc[0]
+	}
+	return ""
+}
+
 // CommandScopeDefault represents the default scope of bot commands.
-func CommandScopeDefault() CommandScope {
-	return commandScope{typ: ScopeTypeDefault}
+func CommandScopeDefault(lc ...string) CommandScope {
+	return commandScope{typ: ScopeTypeDefault, languageCode: lang(lc...)}
 }
 
 // CommandScopeAllPrivateChats represents the scope of bot commands,
 // covering all private chats.
-func CommandScopeAllPrivateChats() CommandScope {
-	return commandScope{typ: ScopeTypeAllPrivateChats}
+func CommandScopeAllPrivateChats(lc ...string) CommandScope {
+	return commandScope{typ: ScopeTypeAllPrivateChats, languageCode: lang(lc...)}
 }
 
 // CommandScopeAllGroupChats represents the scope of bot commands,
 // covering all group and supergroup chats.
-func CommandScopeAllGroupChats() CommandScope {
-	return commandScope{typ: ScopeTypeAllGroupChats}
+func CommandScopeAllGroupChats(lc ...string) CommandScope {
+	return commandScope{typ: ScopeTypeAllGroupChats, languageCode: lang(lc...)}
 }
 
 // CommandScopeAllChatAdministrators represents the scope of bot commands,
 // covering all group and supergroup chat administrators.
-func CommandScopeAllChatAdministrators() CommandScope {
-	return commandScope{typ: ScopeTypeAllChatAdministrators}
+func CommandScopeAllChatAdministrators(lc ...string) CommandScope {
+	return commandScope{typ: ScopeTypeAllChatAdministrators, languageCode: lang(lc...)}
 }
 
 // CommandScopeChat represents the scope of bot commands, covering a
 // specific chat.
-func CommandScopeChat(chatID int64) CommandScope {
+func CommandScopeChat(chatID int64, lc ...string) CommandScope {
 	return commandScope{
-		typ:    ScopeTypeChat,
-		chatID: chatID,
+		typ:          ScopeTypeChat,
+		chatID:       chatID,
+		languageCode: lang(lc...),
 	}
 }
 
 // CommandScopeChatAdministrators represents the scope of bot commands,
 // covering all administrators of a specific group or supergroup chat.
-func CommandScopeChatAdministrators(chatID int64) CommandScope {
+func CommandScopeChatAdministrators(chatID int64, lc ...string) CommandScope {
 	return commandScope{
-		typ:    ScopeTypeChatAdministrators,
-		chatID: chatID,
+		typ:          ScopeTypeChatAdministrators,
+		chatID:       chatID,
+		languageCode: lang(lc...),
 	}
 }
 
 // CommandScopeChatMember represents the scope of bot commands, covering a
 // specific member of a group or supergroup chat.
-func CommandScopeChatMember(chatID, userID int64) CommandScope {
+func CommandScopeChatMember(chatID, userID int64, lc ...string) CommandScope {
 	return commandScope{
-		typ:    ScopeTypeChatMember,
-		chatID: chatID,
-		userID: userID,
+		typ:          ScopeTypeChatMember,
+		chatID:       chatID,
+		userID:       userID,
+		languageCode: lang(lc...),
 	}
 }

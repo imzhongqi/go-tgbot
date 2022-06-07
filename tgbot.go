@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -84,6 +85,54 @@ func (bot *Bot) allocateContextWithUpdate(update *tgbotapi.Update) (c *Context, 
 	}, recycle
 }
 
+type multiErr []error
+
+func (e multiErr) Error() string {
+	builder := strings.Builder{}
+	for _, err := range e {
+		builder.WriteString(err.Error())
+		builder.WriteByte(' ')
+	}
+	return builder.String()
+}
+
+func (bot *Bot) ClearBotCommands() error {
+	wg := sync.WaitGroup{}
+	ec := make(chan error)
+	request := func(c tgbotapi.Chattable) {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+			if _, err := bot.api.Request(c); err != nil {
+				ec <- err
+			}
+		}()
+	}
+
+	var errs multiErr
+	go func() {
+		for e := range ec {
+			errs = append(errs, e)
+		}
+	}()
+
+	request(tgbotapi.NewDeleteMyCommands())
+	request(tgbotapi.NewDeleteMyCommandsWithScope(tgbotapi.NewBotCommandScopeDefault()))
+	request(tgbotapi.NewDeleteMyCommandsWithScope(tgbotapi.NewBotCommandScopeAllPrivateChats()))
+	request(tgbotapi.NewDeleteMyCommandsWithScope(tgbotapi.NewBotCommandScopeAllGroupChats()))
+	request(tgbotapi.NewDeleteMyCommandsWithScope(tgbotapi.NewBotCommandScopeAllChatAdministrators()))
+
+	wg.Wait()
+
+	close(ec)
+
+	if errs != nil {
+		return errs
+	}
+	return nil
+}
+
 // AddCommands add commands to the bot.
 func (bot *Bot) AddCommands(commands ...*Command) {
 	if bot.commands == nil {
@@ -122,7 +171,7 @@ func (bot *Bot) CommandsWithScope() map[CommandScope][]*Command {
 			continue
 		}
 
-		for scope := range cmd.scopes {
+		for _, scope := range cmd.scopes {
 			commandGroups[scope] = append(commandGroups[scope], cmd)
 		}
 	}
