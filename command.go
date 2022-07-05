@@ -67,20 +67,15 @@ func WithHide(v bool) CommandOption {
 	}
 }
 
-func makeScopeKey(scope CommandScope) string {
-	return fmt.Sprintf("type:%s,language:%s,chat:%d,user:%d", scope.Type(), scope.LanguageCode(), scope.ChatID(), scope.UserID())
-}
-
 func WithScopes(scopes ...CommandScope) CommandOption {
 	return func(cmd *Command) {
-		cmd.scopes = make([]CommandScope, 0)
-		scopeSet := make(map[string]struct{}, len(scopes))
+		cmd.scopes = make([]CommandScope, 0, len(scopes))
+		scopeSet := make(map[CommandScope]struct{}, len(scopes))
 		for _, scope := range scopes {
-			key := makeScopeKey(scope)
-			if _, ok := scopeSet[key]; ok {
+			if _, ok := scopeSet[scope]; ok {
 				continue
 			}
-			scopeSet[key] = struct{}{}
+			scopeSet[scope] = struct{}{}
 			cmd.scopes = append(cmd.scopes, scope)
 		}
 	}
